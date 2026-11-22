@@ -305,3 +305,24 @@ fn loom_keys_presets_and_share() {
     assert_eq!(share.lines().count(), 1 + 6);
     assert!(share.lines().skip(1).all(|l| l.chars().count() == 121));
 }
+
+#[test]
+fn rule_lab_reruns_fast_enough_for_every_spec_change() {
+    // The Rule lab reruns 400 generations of 64 × 40 on every edit; with 24 neighbours that is
+    // the heaviest case. Budget: 150 ms in the test profile (release is far faster; see
+    // `examples/lab_timing.rs`). Best of three, so a busy machine doesn't fail it.
+    let spec = ap_engine::RunSpec {
+        rule: LifeRule::LIFE.with_neighbourhood(Neighbourhood::MOORE2),
+        seed: Seed::MOCKUP_SOUP,
+        ..Default::default()
+    };
+    let best = (0..3)
+        .map(|_| {
+            let start = std::time::Instant::now();
+            std::hint::black_box(run(&spec));
+            start.elapsed()
+        })
+        .min()
+        .unwrap();
+    assert!(best.as_millis() < 150, "{best:?}");
+}

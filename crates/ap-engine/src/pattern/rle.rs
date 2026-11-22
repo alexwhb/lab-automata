@@ -221,7 +221,7 @@ pub fn write(pattern: &Pattern, rule: Option<&LifeRule>, name: Option<&str>) -> 
 }
 
 /// Writes a whole [`PatternFile`]: `#N`, `#O`, `#C` lines (one per comment, newlines folded to
-/// spaces), the header with `rule =` when present, and the body as [`write`] does.
+/// spaces), the header with `rule =` when present, and the body as [`write()`] does.
 pub fn write_file(file: &PatternFile) -> String {
     let one_line = |s: &str| s.replace(['\r', '\n'], " ");
     let mut out = String::new();

@@ -29,6 +29,8 @@
 //! assert_eq!(ap_engine::presets::rule_name(&highlife), Some("HighLife"));
 //! ```
 
+#![warn(missing_docs)]
+
 pub mod analysis;
 pub mod breed;
 pub mod elementary;
@@ -43,7 +45,7 @@ pub mod script;
 pub use analysis::{CellChange, Frame, Repeat, Report, Run, RunSpec, Seed, SpecError, run};
 pub use breed::{Brood, Jar, Lineage, LineageEntry, Liveliness, Terrarium};
 pub use elementary::{Elementary, FamousThread, Weave, WeaveStart};
-pub use grid::{Anchor, BBox, Grid, StepStats};
+pub use grid::{Anchor, BBox, CellState, Grid, StepStats};
 pub use mood::{History, Mood};
 pub use pattern::{Pattern, PatternError, PatternFile};
 pub use presets::Cartridge;

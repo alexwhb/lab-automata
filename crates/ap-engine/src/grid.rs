@@ -35,6 +35,38 @@ pub enum Anchor {
     Center,
 }
 
+/// Ages above this are elders (TRAY-2).
+pub const ELDER_AGE: u16 = 10;
+
+/// How a Tray cell is drawn (TRAY-2's cell-age scale), as the mockup classes it: newborn
+/// (age 1), alive (2–10), elder (> 10), a fading ghost trail (3, 2, 1) or empty.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CellState {
+    /// Dead, no trail.
+    Empty,
+    /// Dead with a ghost trail of 1–3 (3 = just died).
+    Trail(u8),
+    /// Age 1.
+    Newborn,
+    /// Age 2–10.
+    Alive,
+    /// Older than 10.
+    Elder,
+}
+
+impl CellState {
+    /// Classifies an age and trail.
+    pub const fn of(age: u16, trail: u8) -> CellState {
+        match (age, trail) {
+            (0, 0) => CellState::Empty,
+            (0, t) => CellState::Trail(t),
+            (1, _) => CellState::Newborn,
+            (a, _) if a > ELDER_AGE => CellState::Elder,
+            _ => CellState::Alive,
+        }
+    }
+}
+
 /// An axis-aligned box of cells.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BBox {
@@ -118,6 +150,11 @@ impl Grid {
     /// The ghost trail of `(x, y)` (0–3; 0 when outside).
     pub fn trail(&self, x: usize, y: usize) -> u8 {
         self.index(x, y).map_or(0, |i| self.trail[i])
+    }
+
+    /// How `(x, y)` is drawn (empty outside).
+    pub fn cell_state(&self, x: usize, y: usize) -> CellState {
+        CellState::of(self.age(x, y), self.trail(x, y))
     }
 
     /// Whether `(x, y)` is alive.
@@ -387,6 +424,21 @@ mod tests {
         assert_eq!(g.age(2, 2), 4);
         assert_eq!(g.trail(1, 2), 3);
         assert_eq!(g.trail(2, 3), 0);
+    }
+
+    #[test]
+    fn cell_states_follow_the_age_scale() {
+        assert_eq!(CellState::of(0, 0), CellState::Empty);
+        assert_eq!(CellState::of(0, 2), CellState::Trail(2));
+        assert_eq!(CellState::of(1, 0), CellState::Newborn);
+        assert_eq!(CellState::of(10, 0), CellState::Alive);
+        assert_eq!(CellState::of(11, 0), CellState::Elder);
+        let mut g = blinker();
+        g.step(&LifeRule::LIFE, Boundary::Dead);
+        assert_eq!(g.cell_state(1, 2), CellState::Trail(3));
+        assert_eq!(g.cell_state(2, 1), CellState::Newborn);
+        assert_eq!(g.cell_state(2, 2), CellState::Alive);
+        assert_eq!(g.cell_state(99, 99), CellState::Empty);
     }
 
     #[test]
