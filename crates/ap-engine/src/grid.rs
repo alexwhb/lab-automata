@@ -219,8 +219,8 @@ impl Grid {
         let (ox, oy) = match anchor {
             Anchor::TopLeft => (x, y),
             Anchor::Center => (
-                x - (pattern.width() / 2) as i64,
-                y - (pattern.height() / 2) as i64,
+                x.saturating_sub((pattern.width() / 2) as i64),
+                y.saturating_sub((pattern.height() / 2) as i64),
             ),
         };
         let (w, h) = (self.w as i64, self.h as i64);

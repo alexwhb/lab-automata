@@ -265,8 +265,8 @@ fn rule_lab_matches_the_mockup_for_every_seed_boundary_and_neighbourhood() {
 
         // The mockup's detection is hash-only; the generator checked each of its repeats cell by
         // cell. Where it was real, ours (hash + full compare) must find the same one.
-        let mockup = (case.first_repeat >= 0).then(|| Repeat {
-            start: case.first_repeat as usize,
+        let mockup = (case.first_repeat >= 0).then_some(Repeat {
+            start: case.first_repeat.max(0) as usize,
             period: case.period,
         });
         match case.repeat_exact {
