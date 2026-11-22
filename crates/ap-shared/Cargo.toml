@@ -1,0 +1,15 @@
+[package]
+name = "ap-shared"
+description = "UI-free vocabulary shared by the Automata Playground app and automata-mcp: app identity, screens and modes, the bridge socket path, the Automata bridge methods and their payloads, and pattern / rule input parsing."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ap-engine = { workspace = true }
+lab-mcp = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -5,6 +5,8 @@ members = [
     "crates/ap-engine",
     "crates/automata-playground",
     "crates/ap-bench",
+    "crates/ap-shared",
+    "crates/ap-mcp",
 ]
 
 [workspace.package]
@@ -31,6 +33,7 @@ lab-mcp = { path = "../labkit/crates/lab-mcp", default-features = false }
 ap-theme = { path = "crates/ap-theme" }
 ap-engine = { path = "crates/ap-engine" }
 ap-bench = { path = "crates/ap-bench" }
+ap-shared = { path = "crates/ap-shared" }
 
 [profile.dev]
 opt-level = 1
