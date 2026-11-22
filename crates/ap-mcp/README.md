@@ -122,7 +122,7 @@ it asks eframe to paint a frame for each request (`RequestPaintWhileHidden`).
 
 ## Protocol
 
-Built on `lab-mcp` (`../labkit/crates/lab-mcp`): stdio, one JSON-RPC 2.0 message per line;
+Built on `lab-mcp` (from [labkit](https://github.com/alexwhb/labkit)): stdio, one JSON-RPC 2.0 message per line;
 protocol **2026-07-28** (stateless, per-request `_meta`, `server/discover`) and the legacy
 `initialize` handshake for 2025-11-25, 2025-06-18, 2025-03-26 and 2024-11-05; tools only. Tool
 calls run concurrently, so `ping` and `notifications/cancelled` work while a screenshot or a

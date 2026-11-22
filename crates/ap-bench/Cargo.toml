@@ -4,6 +4,7 @@ description = "Automata Playground's 2.5D bench: CSS-exact perspective projectio
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]

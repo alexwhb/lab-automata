@@ -4,6 +4,7 @@ description = "The Automata Playground engine, free of UI: Life-like rules on an
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]

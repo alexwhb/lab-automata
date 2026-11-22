@@ -8,8 +8,8 @@
 ## What is it?
 
 Automata Playground is the fourth bench in the **lab series** ("SPICE for X"), next to
-[Breadbox](../breadbox) (circuits) and [Chem Playground](../chem-playground) (chemistry), with
-Bio Playground planned. It shares their greys, graph-paper ground, header, 2.5D bench and
+[Breadbox](https://github.com/alexwhb/lab-breadbox) (circuits) and Chem Playground (chemistry),
+with Bio Playground planned. It shares their greys, graph-paper ground, header, 2.5D bench and
 fonts, and adds one magenta accent ramp, a cell-age scale and cell-glyph icons.
 
 - **Playground** — three benches you play with: the **Tray** (Life-like rules on a tilted
@@ -77,6 +77,7 @@ and the page scrolls on narrow windows (down to 390 px).
 ## Run
 
 ```sh
+git clone https://github.com/alexwhb/lab-automata && cd lab-automata
 export PATH="$HOME/.cargo/bin:$PATH"     # rustup's toolchain, not an older Homebrew rustc
 cargo run --release -p automata-playground
 ```
@@ -84,7 +85,8 @@ cargo run --release -p automata-playground
 Or build the app bundle: `scripts/bundle-macos.sh` → `dist/Automata Playground.app` (add
 `--dmg` for a disk image, `--check` to verify it). macOS on Apple Silicon is what's built and
 tested; you need [Rust via rustup](https://rustup.rs) (`rust-toolchain.toml` selects stable).
-The sibling `../labkit` checkout must be next to this one (shared theme, UI and MCP crates).
+Cargo fetches the shared [labkit](https://github.com/alexwhb/labkit) crates (theme, UI, MCP)
+from GitHub at the commit pinned in `Cargo.toml`.
 
 `automata-playground --smoke 5` runs the Tray for five seconds and prints a one-line report
 (start-up time, frames, generations).
@@ -161,7 +163,18 @@ scripts/                test-all, bundle-macos / check-bundle, compare-mockup, s
 Each bench is a playground on top of a serious engine: Breadbox puts a SPICE engine and real
 Arduino firmware under a breadboard, Chem Playground a reaction-kinetics engine under a
 glassware bench, and Automata Playground an exact cellular-automata engine under a Petri tray.
-They share [`labkit`](../labkit) (fonts and egui style, layout maths and graph-paper ground,
-the MCP server and live bridge), a look and the Playground / Advanced split.
+They share [`labkit`](https://github.com/alexwhb/labkit) (fonts and egui style, layout maths
+and graph-paper ground, the MCP server and live bridge), a look and the Playground / Advanced
+split.
 
-MIT licensed.
+| repo | what it is |
+|---|---|
+| [lab-breadbox](https://github.com/alexwhb/lab-breadbox) | Breadbox: breadboards, real Arduino firmware, a SPICE workbench |
+| lab-chem | Chem Playground: glassware bench on a reaction-kinetics engine (not published yet) |
+| [lab-automata](https://github.com/alexwhb/lab-automata) | Automata Playground (this repo) |
+| [labkit](https://github.com/alexwhb/labkit) | the shared crates |
+
+## License
+
+MIT (see [`LICENSE`](LICENSE)). The bundled fonts (Inter, JetBrains Mono, Space Grotesk, via
+labkit) are under the SIL Open Font License 1.1.

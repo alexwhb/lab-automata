@@ -118,7 +118,7 @@ done
 [ -f LICENSE ] && cp LICENSE "$res/licenses/LICENSE-Automata-Playground.txt"
 
 # Third-party notices: every crates.io crate linked into the shipped binaries (normal
-# dependencies, this platform). Path crates (this workspace, labkit) are lab-series code.
+# dependencies, this platform). This workspace and labkit (a git dependency) are lab-series code.
 # shellcheck disable=SC2016  # the Python program is meant to be single-quoted
 ROOTS="automata-playground${mcp_pkg:+ $mcp_pkg}" python3 -c '
 import json, os, sys
@@ -136,7 +136,8 @@ while todo:
         if any(k["kind"] is None for k in d["dep_kinds"]):
             todo.append(d["pkg"])
 rows = sorted((pk[i]["name"], pk[i]["version"], pk[i].get("license") or "see crate",
-               pk[i].get("repository") or "") for i in seen if pk[i]["source"])
+               pk[i].get("repository") or "") for i in seen
+              if (pk[i]["source"] or "").startswith("registry+"))
 print("# Third-party software in Automata Playground\n")
 print("Automata Playground links the Rust crates below (license expressions as published on")
 print("crates.io). Fonts: Inter, JetBrains Mono and Space Grotesk under the SIL Open Font")

@@ -12,7 +12,8 @@
 ## Decisions (lead, 2026-11-22)
 
 - Location `~/Projects/Personal/lab-series/automata-playground/`, its own git repo, like
-  Breadbox and Chem Playground. Shared code comes from `../labkit` by path.
+  Breadbox and Chem Playground. Shared code comes from labkit (by path until
+  2026-11-22; since then a git dependency on github.com/alexwhb/labkit pinned to a commit).
 - Stack as the siblings: eframe/egui 0.37 (wgpu, AccessKit), egui_kittest, edition 2024.
 - labkit is used for fonts, the egui style builder and contrast helpers (`lab-theme`), layout
   maths and graph-paper painting (`lab-ui`), and MCP (`lab-mcp`). `lab-ui`'s widgets are drawn
@@ -297,3 +298,12 @@ reviewer's repro, seen failing before the fix): `crates/automata-playground/test
 - **shell**: placeholders (`tray.rs`, `loom.rs`, `terrarium.rs`, `rule_lab.rs`) are ready for
   wave 2 — see `docs/ARCHITECTURE.md` › "How a screen plugs in". Their header / tab-row
   actions already match the mockup's positions at 1440 and 390.
+
+## After the build (2026-11-22)
+
+- The header's app switcher is gone while the apps don't switch to each other (NAV-3). The
+  Series screen stays (MCP `navigate`, `App::open_series`); mockup comparisons cut the switcher
+  out of the references (`tests/common`: `desktop_reference`, `phone_reference`).
+- Published as github.com/alexwhb/lab-automata (MIT). The lab-series repos share a `lab-` prefix:
+  `lab-breadbox` (renamed from `breadbox`), `lab-automata`, later `lab-chem` / `lab-bio`, and
+  `labkit` (now public too, pinned here by git commit). Local folder names are unchanged.

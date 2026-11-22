@@ -13,7 +13,7 @@ mode (Rule lab: spec, scrub, analyse, netlist-style script, export).
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | crate map and contracts between crates |
 | [`docs/design/`](docs/design) | the mockup: `mockup/*.dc.html` (spec), `screenshots/*-1440.png` / `*-390.png` (rendered references), `bundles/*.html` (runnable in Chrome) |
 | [`PROGRESS.md`](PROGRESS.md) | who owns what, status, open issues, requests |
-| [`../labkit`](../labkit) | shared lab-series crates (`lab-theme`, `lab-ui`, `lab-mcp`) — use them, never edit them |
+| [labkit](https://github.com/alexwhb/labkit) (checked out at `../labkit`) | shared lab-series crates (`lab-theme`, `lab-ui`, `lab-mcp`), a git dependency pinned to a commit in `Cargo.toml` — use them, never edit them from here (see "Working on labkit") |
 | [`../breadbox`](../breadbox), [`../chem-playground`](../chem-playground) | sister apps — read for patterns (egui_kittest harness, canvases, MCP); never edit them |
 
 ## Rules
@@ -27,6 +27,17 @@ mode (Rule lab: spec, scrub, analyse, netlist-style script, export).
   right now. Never edit anything outside this repo. If labkit fails to compile, it's probably
   mid-edit: wait a minute and retry. Anything that should move into labkit goes under
   "Candidates for labkit" in `PROGRESS.md`.
+- **Working on labkit**: this repo is public (github.com/alexwhb/lab-automata) and builds
+  labkit from GitHub at the pinned `rev`. To try it against the local `../labkit` checkout,
+  create `.cargo/config.toml` (gitignored) and delete it when done:
+  ```toml
+  [patch."https://github.com/alexwhb/labkit"]
+  lab-theme = { path = "../labkit/crates/lab-theme" }
+  lab-ui = { path = "../labkit/crates/lab-ui" }
+  lab-mcp = { path = "../labkit/crates/lab-mcp" }
+  ```
+  To move to a newer labkit: it must be pushed first; bump all three `rev`s together, then run
+  `scripts/test-all.sh`.
 - **Commits**: commit only your own paths (`git add <paths> && git commit -m "..." -- <paths>`);
   retry if `.git/index.lock` is busy. Small, frequent commits with clear messages. End commit
   messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
