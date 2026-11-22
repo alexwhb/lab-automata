@@ -1,4 +1,4 @@
-//! The header (NAV-1 / NAV-3), drawn to the mockup's `<header>`: `min-height: 56px; display:
+//! The header (NAV-1), drawn to the mockup's `<header>`: `min-height: 56px; display:
 //! flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 0 16px; border-bottom:
 //! 1px solid #242424; background: rgba(12,12,12,.8)` holding
 //!
@@ -7,9 +7,10 @@
 //!    AccessKit `Link` to the Tray;
 //! 2. the mode switcher (`margin-left: 12px`): Playground (cube) · Advanced (lines) links in a
 //!    `rgba(6,6,6,.88)` well, `Navigation` named "Mode";
-//! 3. the app switcher: Breadbox, Chem Playground, Bio Playground, Automata Playground
-//!    (current, `.sw-on`) — 32 px squares with the 16 px glyphs, a `Group` named "Switch app";
-//! 4. the screen's actions (`margin-left: auto; flex-wrap: wrap; gap: 8px`).
+//! 3. the screen's actions (`margin-left: auto; flex-wrap: wrap; gap: 8px`).
+//!
+//! The mockup's app switcher (Breadbox · Chem · Bio · Automata squares between the modes and the
+//! actions) is left out while the apps don't switch to each other (NAV-3).
 //!
 //! At 390 px each part wraps onto its own row exactly like the browser (see `flow`).
 
@@ -19,12 +20,10 @@ use super::seg::{SegGroup, SegItem, SegStyle};
 use super::text::{galley, galley_spaced, text_top};
 use super::{hit, interact};
 use crate::ctx::Ctx;
-use crate::launcher::AppId;
 use crate::router::{Mode, Route};
 use ap_theme as t;
 use eframe::egui::{
-    Align, CornerRadius, Id, Layout, Rect, Stroke, StrokeKind, Ui, UiBuilder, accesskit::Role,
-    pos2, vec2,
+    Align, CornerRadius, Id, Layout, Rect, Stroke, Ui, UiBuilder, accesskit::Role, pos2, vec2,
 };
 use lab_ui::paint::{advance_block, focus_ring_if};
 
@@ -73,7 +72,6 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
     let brand_w = 26.0 + 10.0 + word.size().x + 10.0 + slash.size().x + 10.0 + doc.size().x;
     let modes = mode_group(route);
     let modes_size = modes.one_row_size(ui);
-    let switch_size = vec2(2.0 + 6.0 + 4.0 * 32.0 + 3.0 * 2.0, 40.0);
     let slot_id = Id::unique("ap-header-slot").with(route);
     let remembered = Remembered::load(ui.ctx(), slot_id);
     // never measured: assume it needs its own line (then it's measured unwrapped)
@@ -81,7 +79,6 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
     let items = [
         FlowItem::fixed(vec2(brand_w, 26.0)),
         FlowItem::fixed(modes_size).margin(12.0),
-        FlowItem::fixed(switch_size),
         FlowItem::fixed(slot).auto().shrink(),
     ];
     let lay = flow(&items, inner_w, vec2(GAP, GAP), t::size::HEADER);
@@ -149,17 +146,9 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
         });
     }
 
-    // ---- app switcher
-    if let Some(app) = app_switcher(&mut bar_ui, at(2)) {
-        match app {
-            AppId::Automata => ctx.go(Route::Tray),
-            other => ctx.open_series(other),
-        }
-    }
-
     // ---- the screen's actions
-    let slot_rect = at(3);
-    let own_line = lay.lines.last().is_some_and(|l| l == &vec![3]);
+    let slot_rect = at(2);
+    let own_line = lay.lines.last().is_some_and(|l| l == &vec![2]);
     let max_w = if own_line {
         inner_w
     } else {
@@ -199,71 +188,4 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
 
     advance_block(ui, bar);
     bar
-}
-
-/// The app switcher in `rect`: returns the app clicked.
-fn app_switcher(ui: &mut Ui, rect: Rect) -> Option<AppId> {
-    let group = ui.new_child(
-        UiBuilder::new()
-            .id_salt("switch-app")
-            .max_rect(rect)
-            .accessibility_role(Role::Group)
-            .accessibility_label("Switch app"),
-    );
-    super::set_bounds(&group, rect);
-    group.painter().rect(
-        rect,
-        CornerRadius::same(t::radius::WELL),
-        t::INSET_BAR,
-        Stroke::new(1.0, t::BORDER),
-        StrokeKind::Inside,
-    );
-    let visuals: Vec<Rect> = (0..4)
-        .map(|i| {
-            Rect::from_min_size(
-                pos2(rect.left() + 4.0 + i as f32 * 34.0, rect.top() + 4.0),
-                vec2(32.0, 32.0),
-            )
-        })
-        .collect();
-    let targets = hit::tile(&visuals);
-    let mut clicked = None;
-    for (i, app) in AppId::ALL.into_iter().enumerate() {
-        let r = visuals[i];
-        let current = app == AppId::Automata;
-        let resp = interact(
-            &group,
-            group.scope_id().with(i),
-            targets[i],
-            true,
-            Role::Link,
-            app.switcher_label(),
-            None,
-        );
-        group
-            .ctx()
-            .accesskit_node_builder(resp.id, |b| b.set_selected(current));
-        let fill = if current {
-            Some(t::SEG_ON)
-        } else if resp.hovered() {
-            Some(t::SW_HOVER)
-        } else {
-            None
-        };
-        if let Some(f) = fill {
-            group
-                .painter()
-                .rect_filled(r, CornerRadius::same(t::radius::BUTTON), f);
-        }
-        Icon::app(app).paint(
-            group.painter(),
-            Rect::from_center_size(r.center(), vec2(16.0, 16.0)),
-            t::TEXT,
-        );
-        focus_ring_if(&group, &resp, r, CornerRadius::same(t::radius::BUTTON));
-        if resp.clicked() {
-            clicked = Some(app);
-        }
-    }
-    clicked
 }

@@ -201,7 +201,7 @@ pub fn click_role(h: &mut App, label: &str, role: Role) {
     settle(h);
 }
 
-/// Clicks a link (the brand, mode links, app-switcher icons).
+/// Clicks a link (the brand, the mode links).
 pub fn click_link(h: &mut App, label: &str) {
     click_role(h, label, Role::Link);
 }
@@ -290,17 +290,14 @@ pub fn child_labels(h: &App, parent: &str, parent_role: Role, role: Role) -> Vec
         .collect()
 }
 
-/// Controls the mockup packs 2–4 px apart (bit rows, the 5 × 5 neighbourhood, the 32 px app
-/// switcher squares, the wrapping Rule-lab family well): their targets grow to 44 px across
+/// Controls the mockup packs 2–4 px apart (bit rows, the 5 × 5 neighbourhood, the wrapping
+/// Rule-lab family well): their targets grow to 44 px across
 /// the open side and tile the group along the packed side, so they may be narrower than 44
 /// (A11Y-3 "where padding allows") — but never under 28 (the Rule lab bits' 29 px pitch).
 pub fn dense(label: &str) -> bool {
     label.starts_with("Born with ")
         || label.starts_with("Survives with ")
         || label.starts_with("Neighbour ")
-        || automata_playground::AppId::ALL
-            .iter()
-            .any(|a| a.switcher_label() == label)
         || ["Life-like", "Generations", "Larger than Life", "Lenia"].contains(&label)
 }
 
@@ -367,6 +364,49 @@ pub fn mockup_png(route: Route, width: u32) -> PathBuf {
         "docs/design/screenshots/{}-{width}.png",
         mockup_name(route)
     ))
+}
+
+/// The mockup's 390 px header rows taken by the app switcher: the 40 px well (y 98–138) and the
+/// 16 px gap above it.
+pub const PHONE_SWITCHER_ROWS: std::ops::Range<u32> = 82..138;
+
+/// The 390 px reference for `route` without the header's app switcher: its row is cut out and
+/// the page below moves up 56 px (the Series mockup has no header).
+pub fn phone_reference(route: Route) -> image::RgbaImage {
+    let mock = load(&mockup_png(route, 390));
+    if route == Route::Series {
+        return mock;
+    }
+    let cut = PHONE_SWITCHER_ROWS;
+    let mut out = image::RgbaImage::new(mock.width(), mock.height() - (cut.end - cut.start));
+    for (x, y, px) in out.enumerate_pixels_mut() {
+        let src = if y < cut.start {
+            y
+        } else {
+            y + cut.end - cut.start
+        };
+        *px = *mock.get_pixel(x, src);
+    }
+    out
+}
+
+/// The 1440 reference for `route` without the header's app switcher: its 142 × 40 well, 16 px
+/// right of the mode switcher (whose right edge comes from `app`, laid out like the mockup),
+/// is painted over with the header's ground, 4 px of slack around it.
+pub fn desktop_reference(route: Route, app: &App) -> image::RgbaImage {
+    let mut mock = load(&mockup_png(route, 1440));
+    if route == Route::Series {
+        return mock;
+    }
+    let modes = get(app, "Mode", eframe::egui::accesskit::Role::Navigation).rect();
+    let x0 = modes.right().round() as u32 + 16 - 4;
+    let ground = *mock.get_pixel(x0, 28);
+    for y in 4..52 {
+        for x in x0..x0 + 4 + 142 + 4 {
+            mock.put_pixel(x, y, ground);
+        }
+    }
+    mock
 }
 
 /// Loads a PNG.

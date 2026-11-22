@@ -712,12 +712,12 @@ fn keyboard() {
 fn stays_close_to_the_mockup() {
     let mut h = lab();
     let img = render(&mut h);
-    let d = mean_diff(&img, &load(&mockup_png(Route::RuleLab, 1440)), None);
+    let d = mean_diff(&img, &desktop_reference(Route::RuleLab, &h), None);
     assert!(
         d < 5.0,
         "Rule lab drifted from its mockup at 1440: mean |Δ| = {d:.2}"
     );
-    let reference = load(&mockup_png(Route::RuleLab, 390));
+    let reference = phone_reference(Route::RuleLab);
     let phone = render_full(Route::RuleLab, PHONE_W, reference.height() as f32);
     let d = mean_diff(&phone, &reference, None);
     assert!(

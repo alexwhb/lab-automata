@@ -1,13 +1,13 @@
-//! Navigation (NAV-1/2/3/4/5) driven through AccessKit: the brand, both modes, every bench
-//! tab and every app-switcher icon land on the right route from every screen, at 1440 and at
-//! 390 px; ⌘1–⌘4, Space and `S`; the Playground's last-bench memory; carry-over delivery.
+//! Navigation (NAV-1/2/3/4/5) driven through AccessKit: the brand, both modes and every bench
+//! tab land on the right route from every screen, at 1440 and at 390 px; the header has no app
+//! switcher; ⌘1–⌘4, Space and `S`; the Playground's last-bench memory; carry-over delivery.
 
 mod common;
 
-use automata_playground::{AppId, Carry, Mode, Route};
+use automata_playground::{Carry, Mode, Route};
 use common::*;
 use eframe::egui::{Key, accesskit::Role};
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 
 fn check_header_paths(w: f32, hgt: f32) {
     let mut h = app().size(w, hgt).build();
@@ -24,21 +24,6 @@ fn check_header_paths(w: f32, hgt: f32) {
         let last = h.state().last_bench();
         click_link(&mut h, "Playground");
         assert_eq!(route(&h), last, "Playground from {from:?} at {w}");
-
-        goto(&mut h, from);
-        click_link(&mut h, "Automata Playground (current)");
-        assert_eq!(route(&h), Route::Tray, "Automata icon from {from:?} at {w}");
-
-        for app in AppId::SIBLINGS {
-            goto(&mut h, from);
-            click_link(&mut h, app.switcher_label());
-            assert_eq!(
-                route(&h),
-                Route::Series,
-                "{app:?} icon from {from:?} at {w}"
-            );
-            assert_eq!(h.state().screens().series.highlight, Some(app));
-        }
 
         if from.is_bench() {
             for tab in Route::BENCHES {
@@ -83,9 +68,9 @@ fn bench_tab_row_follows_the_route() {
 }
 
 /// The mode switcher is a `Navigation` "Mode" with two links; the current mode is selected
-/// (none on the Series screen). The Automata switcher icon is always the current app.
+/// (none on the Series screen). There is no app switcher (NAV-3: the apps don't switch yet).
 #[test]
-fn mode_and_app_switchers_report_the_current_one() {
+fn mode_switcher_reports_the_current_one_and_no_app_switcher() {
     let mut h = harness(Route::Tray);
     for r in Route::ALL {
         goto(&mut h, r);
@@ -100,15 +85,16 @@ fn mode_and_app_switchers_report_the_current_one() {
                 "{r:?} {m:?}"
             );
         }
-        assert_eq!(
-            child_labels(&h, "Switch app", Role::Group, Role::Link),
-            AppId::ALL.map(AppId::switcher_label)
+        assert!(h.query_by_label("Switch app").is_none(), "{r:?}");
+        for label in ["Breadbox circuit app", "Automata Playground (current)"] {
+            assert!(h.query_by_label(label).is_none(), "{r:?}: {label}");
+        }
+        // the sibling names only appear on the Series screen's cards, never as header links
+        assert!(
+            h.query_all_by_label("Chem Playground")
+                .all(|n| n.accesskit_node().role() != Role::Link),
+            "{r:?}"
         );
-        assert_eq!(
-            selected(&h, "Automata Playground (current)", Role::Link),
-            Some(true)
-        );
-        assert_eq!(selected(&h, "Chem Playground", Role::Link), Some(false));
     }
 }
 
@@ -141,7 +127,8 @@ fn playground_remembers_the_last_bench() {
     // via a shortcut and the Series screen too
     press_cmd(&mut h, Key::Num2);
     settle(&mut h);
-    click_link(&mut h, "Chem Playground");
+    h.state_mut().navigate(Route::Series);
+    settle(&mut h);
     assert_eq!(route(&h), Route::Series);
     click_link(&mut h, "Playground");
     assert_eq!(route(&h), Route::Loom);
@@ -232,46 +219,45 @@ fn carry_over_reaches_the_target() {
     assert!(got.rle.unwrap().ends_with("3o!"));
 }
 
-/// At 390 px the header wraps like the mockup (Tray-390): brand, mode switcher (indented
-/// 12 px more), app switcher and the actions each on their own rows, 227 px in all; the tab
-/// row follows it in the bench column.
+/// At 390 px the header wraps like the mockup (Tray-390) minus its app-switcher row: brand,
+/// mode switcher (indented 12 px more) and the actions each on their own rows, 171 px in all
+/// (the mockup's 227 less the 40 px switcher and its 16 px gap); the tab row follows it in the
+/// bench column.
 #[test]
 fn phone_header_wraps_like_the_mockup() {
     let h = app().at(Route::Tray).phone().build();
     let brand = get(&h, "Automata Playground", Role::Link).rect();
     let playground = get(&h, "Playground", Role::Link).rect();
     let advanced = get(&h, "Advanced", Role::Link).rect();
-    let breadbox = get(&h, "Breadbox circuit app", Role::Link).rect();
     let run = get(&h, "Run", Role::Button).rect();
     let share = get(&h, "Share", Role::Button).rect();
     assert!(brand.center().y < playground.center().y);
     assert!((playground.center().y - advanced.center().y).abs() < 0.5);
-    assert!(playground.center().y < breadbox.center().y);
-    assert!(breadbox.center().y < run.center().y);
+    assert!(playground.center().y < run.center().y);
     assert!(run.center().y < share.center().y, "Share wraps under Run");
-    for r in [brand, playground, advanced, breadbox, run, share] {
+    for r in [brand, playground, advanced, run, share] {
         assert!(r.left() >= -0.5 && r.right() <= PHONE_W + 0.5, "{r:?}");
     }
-    // the mockup's pixel rows: modes well 42–82 (pills 46–78), switcher 98–138, actions
-    // 154–186 and 194–226 (hit areas extend 6 px around 32 px controls)
+    // the mockup's pixel rows: modes well 42–82 (pills 46–78), then (switcher row removed)
+    // actions 98–130 and 138–170 (hit areas extend 6 px around 32 px controls)
     assert!(
         (playground.top() + 6.0 - 46.0).abs() <= 1.0,
         "{playground:?}"
     );
-    assert!((run.top() + 6.0 - 154.0).abs() <= 1.0, "{run:?}");
-    assert!((share.top() + 6.0 - 194.0).abs() <= 1.0, "{share:?}");
-    assert_eq!(h.state().header_height(), 227.0);
+    assert!((run.top() + 6.0 - 98.0).abs() <= 1.0, "{run:?}");
+    assert!((share.top() + 6.0 - 138.0).abs() <= 1.0, "{share:?}");
+    assert_eq!(h.state().header_height(), 171.0);
 }
 
 /// At 390 px the columns stack at the mockup's panel height and the page grows to the
-/// reference's full height.
+/// reference's full height less the 56 px app-switcher row the header leaves out.
 #[test]
 fn phone_columns_stack_to_the_reference_height() {
     for (r, height) in [
-        (Route::Tray, 2759.0),
-        (Route::Loom, 1915.0),
-        (Route::Terrarium, 1875.0),
-        (Route::RuleLab, 2899.0),
+        (Route::Tray, 2759.0 - 56.0),
+        (Route::Loom, 1915.0 - 56.0),
+        (Route::Terrarium, 1875.0 - 56.0),
+        (Route::RuleLab, 2899.0 - 56.0),
     ] {
         let h = app().at(r).phone().build();
         assert_eq!(h.state().content_height(), height, "{r:?}");

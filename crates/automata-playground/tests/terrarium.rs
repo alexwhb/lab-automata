@@ -332,7 +332,7 @@ fn renders_like_the_mockup_at_1440() {
     let mut h = harness(Route::Terrarium);
     let img = render(&mut h);
     save(&img, &screenshot_dir().join("terrarium-1440.png"));
-    let mock = load(&mockup_png(Route::Terrarium, 1440));
+    let mock = desktop_reference(Route::Terrarium, &h);
     let aside = mean_diff(&img, &mock, Some((1121, 57, 319, 843)));
     let chrome = mean_diff(&img, &mock, Some((0, 0, 1440, 102)));
     println!("terrarium 1440: aside |Δ| = {aside:.2}, header + tabs |Δ| = {chrome:.2}");
@@ -369,7 +369,7 @@ fn works_at_390() {
     click_button(&mut h, "Breed brood 2");
     assert_eq!(codes(&h)[0], "B368/S245");
 
-    let mock = load(&mockup_png(Route::Terrarium, 390));
+    let mock = phone_reference(Route::Terrarium);
     let img = render_full(Route::Terrarium, PHONE_W, mock.height() as f32);
     save(&img, &screenshot_dir().join("terrarium-390.png"));
     let d = mean_diff(&img, &mock, Some((0, 1032, 390, 460)));

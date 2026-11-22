@@ -69,7 +69,7 @@ reproduced exactly as golden tests.
 - Export: copy RLE or the script, save `.rle` / `.rule`, or open the scrubbed generation in
   the Tray.
 
-**Everywhere**: the header's mode and app switchers, ⌘1–⌘4, Tab / Shift-Tab through every
+**Everywhere**: the header's mode switcher, ⌘1–⌘4, Tab / Shift-Tab through every
 control, Space runs and pauses, `S` steps the Tray; every control is an AccessKit button,
 link, tab, slider or text field with a name, and every canvas describes itself; panels stack
 and the page scrolls on narrow windows (down to 390 px).
@@ -162,7 +162,6 @@ Each bench is a playground on top of a serious engine: Breadbox puts a SPICE eng
 Arduino firmware under a breadboard, Chem Playground a reaction-kinetics engine under a
 glassware bench, and Automata Playground an exact cellular-automata engine under a Petri tray.
 They share [`labkit`](../labkit) (fonts and egui style, layout maths and graph-paper ground,
-the MCP server and live bridge), a look and the Playground / Advanced split, and they open
-each other from the app switcher.
+the MCP server and live bridge), a look and the Playground / Advanced split.
 
 MIT licensed.

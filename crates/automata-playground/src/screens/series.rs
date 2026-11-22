@@ -2,8 +2,9 @@
 //! accent". The four app identity cards with their accent / ink / tint / edge ramps, the
 //! cell-age scale, "Shared, unchanged" and the cell-glyph icon family.
 //!
-//! NAV-3: arriving from the app switcher highlights that app's card (2 px ring in its accent,
-//! scrolled into view, AccessKit `selected`). Each sibling card's tag is its Open button
+//! NAV-3: [`App::open_series`](crate::App::open_series) highlights an app's card (2 px ring in
+//! its accent, scrolled into view, AccessKit `selected`); the header has no app switcher for
+//! now, so nothing in the window links here. Each sibling card's tag is its Open button
 //! ("Open" → the injectable launcher; Bio Playground's reads "Planned" and is disabled);
 //! the launcher's answer is reported with a toast.
 
@@ -25,7 +26,7 @@ use lab_ui::paint::focus_ring_if;
 /// The Series screen's state.
 #[derive(Debug, Default)]
 pub struct State {
-    /// The app card to highlight (set by the app switcher, NAV-3).
+    /// The app card to highlight (set by `App::open_series`, NAV-3).
     pub highlight: Option<AppId>,
     scrolled: Option<AppId>,
 }
@@ -565,7 +566,7 @@ fn shared(ui: &mut Ui) {
         ui.spacing_mut().item_spacing = vec2(0.0, 8.0);
         for line in [
             "Neutrals, grid ground, tilted bench",
-            "Header, mode switch, app switcher, Run · Step",
+            "Header, mode switch, Run · Step",
             "Parts palette (here: rules and stamps)",
             "Advanced mode as a netlist-style script",
             "Space Grotesk, Inter, JetBrains Mono",

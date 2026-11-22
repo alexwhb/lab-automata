@@ -187,7 +187,8 @@ impl AutomataApp {
         });
     }
 
-    /// Open the Series screen with `app` highlighted (what the app switcher does).
+    /// Open the Series screen with `app` highlighted (what the mockup's app switcher did; the
+    /// header leaves the switcher out for now, NAV-3).
     pub fn open_series(&mut self, app: AppId) {
         self.apply(NavRequest {
             route: Route::Series,

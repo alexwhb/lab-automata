@@ -1,5 +1,5 @@
 //! The Series screen (SER-1, NAV-3): the identity cards with their ramps, the cell-age scale,
-//! "Shared, unchanged", the icon family; the switcher highlight; Open → the launcher (opened,
+//! "Shared, unchanged", the icon family; the card highlight; Open → the launcher (opened,
 //! not installed, planned) reported with toasts.
 
 mod common;
@@ -42,7 +42,7 @@ fn shows_the_mockups_content() {
     }
     for s in [
         "Neutrals, grid ground, tilted bench",
-        "Header, mode switch, app switcher, Run · Step",
+        "Header, mode switch, Run · Step",
         "Parts palette (here: rules and stamps)",
         "Advanced mode as a netlist-style script",
         "Space Grotesk, Inter, JetBrains Mono",
@@ -65,13 +65,14 @@ fn shows_the_mockups_content() {
     assert!(h.query_by_label_contains("Open Automata").is_none());
 }
 
-/// NAV-3: a sibling's switcher icon opens the Series screen with that card highlighted;
-/// opening it any other way highlights nothing.
+/// NAV-3: `open_series(app)` opens the Series screen with that card highlighted; opening it
+/// any other way highlights nothing.
 #[test]
-fn switcher_highlights_the_card() {
+fn open_series_highlights_the_card() {
     let mut h = harness(Route::Tray);
     for app in AppId::SIBLINGS {
-        click_link(&mut h, app.switcher_label());
+        h.state_mut().open_series(app);
+        settle(&mut h);
         assert_eq!(route(&h), Route::Series);
         for other in AppId::ALL {
             assert_eq!(
@@ -92,7 +93,7 @@ fn switcher_highlights_the_card() {
 #[test]
 fn highlight_scrolls_into_view_on_a_phone() {
     let mut h = app().phone().size(PHONE_W, 700.0).build();
-    click_link(&mut h, "Bio Playground");
+    h.state_mut().open_series(AppId::Bio);
     settle(&mut h);
     let card = get(&h, "Bio Playground", Role::Group).rect();
     let view = viewport(&h);

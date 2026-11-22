@@ -13,6 +13,10 @@
 //! `screens_stay_close_to_their_mockups` always runs: the mean channel difference of each
 //! screen's stable regions (header, asides, deterministic benches) must stay under its bound.
 //! `readme_screenshots` writes `docs/screenshots/*.png` with `AP_SCREENSHOTS=1`.
+//!
+//! The app leaves the mockup's header app switcher out while the apps don't switch (NAV-3), so
+//! every comparison takes the references without it (`common::desktop_reference`,
+//! `common::phone_reference`).
 
 mod common;
 
@@ -111,15 +115,17 @@ fn side_by_side_with_mockup() {
     std::fs::create_dir_all(&out_dir).expect("create target/compare");
     for route in Route::ALL.into_iter().filter(|r| wanted(*r)) {
         let name = mockup_name(route);
-        let img = desktop(route);
-        let mock = load(&mockup_png(route, 1440));
+        let (w, h) = route.board_size();
+        let extra = if route == Route::Series { 57.0 } else { 0.0 };
+        let (app, img) = app_like_mockup(route, w, h + extra);
+        let mock = desktop_reference(route, &app);
         let path = out_dir.join(format!("{name}-1440.png"));
         side_by_side(&img, &mock).save(&path).expect("save");
         img.save(out_dir.join(format!("{name}-1440-app.png")))
             .expect("save");
         println!("compare: {}", path.display());
 
-        let mock390 = load(&mockup_png(route, 390));
+        let mock390 = phone_reference(route);
         let phone = render_like_mockup(route, PHONE_W, mock390.height() as f32);
         let path = out_dir.join(format!("{name}-390.png"));
         side_by_side(&phone, &mock390).save(&path).expect("save");
@@ -158,7 +164,8 @@ fn region(app: &App, label: &'static str, img: &RgbaImage) -> Region {
 fn stable_regions(app: &App, route: Route, img: &RgbaImage) -> Vec<(Region, f64)> {
     let full = (0, 0, img.width(), img.height());
     let phone = img.width() < 1000;
-    let header = ("header", (0, 0, img.width(), if phone { 120 } else { 56 }));
+    // at 390: the brand and mode rows (the actions' rows below differ in text rendering)
+    let header = ("header", (0, 0, img.width(), if phone { 98 } else { 56 }));
     let r = |label| region(app, label, img);
     match (route, phone) {
         (Route::Tray, false) => vec![
@@ -216,16 +223,16 @@ fn screens_stay_close_to_their_mockups() {
             continue; // series_is_close_to_its_mockup (the page under the header)
         }
         let (w, h) = route.board_size();
-        for (width, min_h, mock) in [
-            (w, h, load(&mockup_png(route, 1440))),
-            (PHONE_W, 0.0, load(&mockup_png(route, 390))),
-        ] {
-            let min_h = if min_h > 0.0 {
-                min_h
+        for width in [w, PHONE_W] {
+            let (app, img, mock) = if width == PHONE_W {
+                let mock = phone_reference(route);
+                let (app, img) = app_like_mockup(route, width, mock.height() as f32);
+                (app, img, mock)
             } else {
-                mock.height() as f32
+                let (app, img) = app_like_mockup(route, width, h);
+                let mock = desktop_reference(route, &app);
+                (app, img, mock)
             };
-            let (app, img) = app_like_mockup(route, width, min_h);
             for ((name, rect), max) in stable_regions(&app, route, &img) {
                 let d = mean_diff(&img, &mock, Some(rect));
                 println!(

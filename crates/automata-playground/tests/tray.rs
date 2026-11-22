@@ -821,7 +821,12 @@ fn renders_at_1440_and_390() {
 }
 
 fn save_compare(img: &image::RgbaImage, route: Route, width: u32) {
-    let mock = load(&mockup_png(route, width));
+    // (the 1440 reference keeps its app switcher here: this image is only for looking at)
+    let mock = if width == 390 {
+        phone_reference(route)
+    } else {
+        load(&mockup_png(route, width))
+    };
     let h = img.height().max(mock.height());
     let mut out = image::RgbaImage::from_pixel(
         img.width() + 8 + mock.width(),

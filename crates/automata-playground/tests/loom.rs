@@ -362,7 +362,7 @@ fn renders_like_the_mockup_at_1440() {
     settle(&mut h);
     let img = render(&mut h);
     save(&img, &screenshot_dir().join("loom-1440.png"));
-    let mock = load(&mockup_png(Route::Loom, 1440));
+    let mock = desktop_reference(Route::Loom, &h);
     // the stage (fabric, head, keys, caption) and the aside, under the header
     let stage = mean_diff(&img, &mock, Some((0, 102, 1120, 798)));
     let aside = mean_diff(&img, &mock, Some((1121, 57, 319, 843)));
@@ -397,7 +397,7 @@ fn works_at_390() {
     let stage = get(&h, "Loom", Role::Region).rect();
     assert!(aside.top() >= stage.bottom() - 0.5, "stacked");
 
-    let mock = load(&mockup_png(Route::Loom, 390));
+    let mock = phone_reference(Route::Loom);
     let img = render_full(Route::Loom, PHONE_W, mock.height() as f32);
     save(&img, &screenshot_dir().join("loom-390.png"));
     // the aside (same content, same place within the page)

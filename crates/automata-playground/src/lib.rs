@@ -1,5 +1,5 @@
-//! Automata Playground — the egui app: the header (brand, mode switcher, app switcher, the
-//! screen's actions), the bench tab row, the widget kit drawn to the mockup, and the five
+//! Automata Playground — the egui app: the header (brand, mode switcher, the screen's
+//! actions), the bench tab row, the widget kit drawn to the mockup, and the five
 //! screens (Tray, Loom, Terrarium, Rule lab, Series).
 //!
 //! Screens are specified by `docs/design/mockup/*.dc.html` ([`Route::mockup`]). How a screen

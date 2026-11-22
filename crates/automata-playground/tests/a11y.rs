@@ -1,5 +1,5 @@
 //! Accessibility (A11Y-1/3) on every route at 1440 and 390 px: every interactive node has a
-//! role and a name; toggles report pressed, tabs / current mode / current app report
+//! role and a name; toggles report pressed, tabs / current mode report
 //! selected, disabled controls report disabled; click targets reach 44 × 44 where the
 //! mockup's padding allows (and tile their group where it doesn't) without ever covering
 //! another control's centre; Tab walks the header in reading order and draws the focus ring.
@@ -41,8 +41,10 @@ fn check_route(h: &mut App, r: Route, w: f32) {
             )
         })
         .collect();
+    // the Series has the brand, two modes and three Open buttons; every other screen more
+    let floor = if r == Route::Series { 6 } else { 9 };
     assert!(
-        nodes.len() >= 9,
+        nodes.len() >= floor,
         "{r:?} at {w}: only {} interactive nodes",
         nodes.len()
     );
@@ -91,20 +93,12 @@ fn interactive_nodes_are_named_and_big_enough_phone() {
     }
 }
 
-/// The header's brand, modes and switcher icons are links (`<a>` in the mockup); the actions
+/// The header's brand and modes are links (`<a>` in the mockup); the actions
 /// are buttons; the regions are named like the mockup's `aria-label`s.
 #[test]
 fn roles_match_the_mockup() {
     let h = harness(Route::Tray);
-    for label in [
-        "Automata Playground",
-        "Playground",
-        "Advanced",
-        "Breadbox circuit app",
-        "Chem Playground",
-        "Bio Playground",
-        "Automata Playground (current)",
-    ] {
+    for label in ["Automata Playground", "Playground", "Advanced"] {
         get(&h, label, Role::Link);
     }
     for label in [
@@ -121,7 +115,6 @@ fn roles_match_the_mockup() {
         get(&h, label, Role::Button);
     }
     get(&h, "Mode", Role::Navigation);
-    get(&h, "Switch app", Role::Group);
     get(&h, "Tool", Role::Group);
     get(&h, "Benches", Role::TabList);
     get(&h, "Cartridges and stamps", Role::Region);
@@ -151,7 +144,7 @@ fn disabled_controls_report_disabled() {
     assert!(!disabled(&h, "Open Chem Playground"));
 }
 
-/// Tab walks the header in reading order: brand, modes, the app switcher, the screen's
+/// Tab walks the header in reading order: brand, modes, the screen's
 /// actions, then the bench tabs and the tab row's items. Enter on a focused link follows it.
 #[test]
 fn tab_key_walks_in_reading_order() {
@@ -163,10 +156,6 @@ fn tab_key_walks_in_reading_order() {
         "Automata Playground",
         "Playground",
         "Advanced",
-        "Breadbox circuit app",
-        "Chem Playground",
-        "Bio Playground",
-        "Automata Playground (current)",
         "Run",
         "Step",
         "Restart",

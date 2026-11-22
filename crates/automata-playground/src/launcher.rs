@@ -1,4 +1,4 @@
-//! The lab series' apps (the header's app switcher, the Series screen) and the injectable
+//! The lab series' apps (the Series screen) and the injectable
 //! launcher that opens a sibling app (NAV-3).
 //!
 //! The real launcher ([`Launcher::system`]) looks for the app by bundle id with Spotlight
@@ -54,16 +54,6 @@ impl AppId {
     /// Display name ("Chem Playground").
     pub fn name(self) -> &'static str {
         self.identity().name
-    }
-
-    /// The switcher button's accessible name, as in the mockup's `aria-label`.
-    pub fn switcher_label(self) -> &'static str {
-        match self {
-            AppId::Breadbox => "Breadbox circuit app",
-            AppId::Chem => "Chem Playground",
-            AppId::Bio => "Bio Playground",
-            AppId::Automata => "Automata Playground (current)",
-        }
     }
 
     /// The macOS bundle identifier (`None` for apps that don't exist yet).
@@ -291,10 +281,6 @@ mod tests {
     #[test]
     fn identities_and_labels() {
         assert_eq!(AppId::ALL.map(AppId::name)[1], "Chem Playground");
-        assert_eq!(
-            AppId::Automata.switcher_label(),
-            "Automata Playground (current)"
-        );
         assert_eq!(
             AppId::Chem.bundle_id(),
             Some("dev.labseries.ChemPlayground")

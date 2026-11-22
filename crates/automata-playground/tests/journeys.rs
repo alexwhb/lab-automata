@@ -10,7 +10,8 @@
 //!   Rule lab, edit the script, scrub, Open in Playground, the cells cropped as documented.
 //! - (c) [`loom_builds_rule_90_and_weaves_sierpinski`] — the rule keys, weaving, Gould's
 //!   sequence in the shared text.
-//! - (d) [`app_switcher_series_open_and_back`] — NAV-3 with a recording launcher.
+//! - (d) [`series_open_and_back`] — NAV-3's Open buttons with a recording launcher (the header
+//!   has no app switcher for now, so the journey starts on the Series screen).
 //! - (e) [`keyboard_only`] — NAV-5: ⌘1–⌘4, Tab / Enter, Space, `S`, arrow-key drawing.
 //! - (f) the main journeys at 390 px: [`first_launch_journey_on_a_phone`],
 //!   [`terrarium_journey_on_a_phone`], [`phone_focus_scrolls_the_page`].
@@ -618,16 +619,17 @@ fn loom_builds_rule_90_and_weaves_sierpinski() {
     assert_eq!(lines[0].chars().position(|c| c == '█'), Some(60));
 }
 
-// ---- (d) the app switcher and the Series ------------------------------------------------------
+// ---- (d) the Series ---------------------------------------------------------------------------
 
-/// The Chem icon opens the Series with Chem's card highlighted; Open launches it through the
-/// launcher; Bio's Open is disabled; the Automata icon goes back to the Tray.
+/// The Series with Chem's card highlighted: Open launches it through the launcher; Bio's Open
+/// is disabled; the brand goes back to the Tray.
 #[test]
-fn app_switcher_series_open_and_back() {
+fn series_open_and_back() {
     let launcher = Launcher::recording(&[AppId::Chem]);
     let mut h = app().launcher(launcher.clone()).build();
     assert_eq!(route(&h), Route::Tray);
-    click_link(&mut h, AppId::Chem.switcher_label());
+    h.state_mut().open_series(AppId::Chem);
+    settle(&mut h);
     assert_eq!(route(&h), Route::Series);
     assert!(has_label(&h, "series"), "the document name");
     for app in AppId::ALL {
@@ -637,11 +639,6 @@ fn app_switcher_series_open_and_back() {
             "{app:?}"
         );
     }
-    assert_eq!(
-        selected(&h, AppId::Automata.switcher_label(), Role::Link),
-        Some(true),
-        "the Automata icon stays current"
-    );
     click_button(&mut h, "Open Chem Playground");
     assert_eq!(launcher.calls(), [AppId::Chem]);
     assert!(toasts(&h).iter().any(|t| t == "Opening Chem Playground…"));
@@ -655,7 +652,7 @@ fn app_switcher_series_open_and_back() {
         "the planned app never launches"
     );
 
-    click_link(&mut h, AppId::Automata.switcher_label());
+    click_link(&mut h, "Automata Playground");
     assert_eq!(route(&h), Route::Tray);
     assert!(has_label(&h, "glider-garden"));
 }

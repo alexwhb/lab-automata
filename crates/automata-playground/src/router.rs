@@ -1,8 +1,8 @@
 //! Navigation model (NAV-1/2): two modes and five routes.
 //!
 //! Playground holds the three benches (Tray, Loom, Terrarium) under a tab row; Advanced is the
-//! Rule lab; the Series screen is reached from the app switcher (NAV-3) and belongs to no
-//! mode. Each route knows its mockup (`docs/design/mockup/<file>`), the mockup's board size
+//! Rule lab; the Series screen belongs to no mode (the mockup's app switcher led there; the
+//! header leaves it out for now, NAV-3). Each route knows its mockup (`docs/design/mockup/<file>`), the mockup's board size
 //! and the fixed panel height its columns use when they stack.
 
 use serde::{Deserialize, Serialize};
@@ -40,7 +40,7 @@ pub enum Route {
     Terrarium,
     /// SCR-4 Advanced › Rule lab.
     RuleLab,
-    /// SCR-5 the series screen (app switcher).
+    /// SCR-5 the series screen.
     Series,
 }
 

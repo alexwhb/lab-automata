@@ -23,22 +23,23 @@ a spec, not as code to copy.
 | SCR-2 | Playground › Loom · 1D | `Loom.dc.html` | 1440 × 900 |
 | SCR-3 | Playground › Terrarium · breed | `Terrarium.dc.html` | 1440 × 900 |
 | SCR-4 | Advanced › Rule lab | `RuleLab.dc.html` | 1440 × 960 |
-| SCR-5 | Series (reached from the app switcher) | `Series.dc.html` | 1440 × 640 |
+| SCR-5 | Series (no way in from the header for now, see NAV-3; MCP `navigate`) | `Series.dc.html` | 1440 × 640 |
 
 ## Navigation and header (NAV)
 
 - **NAV-1** Every screen has the header: logo mark, "Automata Playground", `/`, the document
   name (`glider-garden`, `loom`, `terrarium`, `glider-garden.rule`, `series`); the **mode
-  switcher** (Playground · Advanced, with their icons); the **app switcher** (Breadbox, Chem
-  Playground, Bio Playground, Automata Playground (current)); and the screen's own actions on
-  the right.
+  switcher** (Playground · Advanced, with their icons); and the screen's own actions on the
+  right. The mockup's app switcher is left out (NAV-3).
 - **NAV-2** Playground screens have the bench tab row: Tray · 2D, Loom · 1D, Terrarium · breed,
   with the active tab underlined in the accent. Playground opens the last-used bench (Tray at
   first start); Advanced opens the Rule lab.
-- **NAV-3** The app switcher: the Automata icon is "current" (pressed look) and goes to the
-  Tray. The other three go to the Series screen with that app highlighted; from there "Open"
-  launches the sibling app if it is installed (macOS bundle id or the lab-series `dist/`
-  folder), and otherwise says it isn't installed (Bio Playground: "planned").
+- **NAV-3** The header has **no app switcher** while the apps don't switch to each other
+  (decided 2026-11-22; the mockup's Breadbox · Chem · Bio · Automata squares are left out, and
+  the mockup comparisons cut them from the references). The Series screen stays (MCP
+  `navigate`, `App::open_series(app)` highlights a card): its "Open" launches the sibling app
+  if it is installed (macOS bundle id or the lab-series `dist/` folder), and otherwise says it
+  isn't installed (Bio Playground: "planned").
 - **NAV-4** Cross-screen actions carry a rule (and pattern) with them: Rule lab "Open in
   Playground" → Tray with that rule and the scrubbed generation's cells; Terrarium "Plant in the
   Tray" / "Analyse in Rule lab" → the first kept jar's rule (or jar 1 if none are kept).
@@ -203,7 +204,8 @@ a spec, not as code to copy.
   page scrolls.
 - **DONE-2** Every number shown comes from the engine; nothing is hard-coded from the mockup.
 - **DONE-3** What the mockup leaves as placeholders is real here: Share, Export, Open in
-  Playground, Plant in the Tray, Analyse in Rule lab, the app switcher, the editable script.
+  Playground, Plant in the Tray, Analyse in Rule lab, the Series' Open buttons, the editable
+  script.
   Generations / Larger than Life / Lenia stay disabled and say so.
 - **DONE-4** Tests: engine unit + reference (REF) tests; headless end-to-end scenarios; GUI
   tests that click, drag and type through every screen with `egui_kittest` via AccessKit;

@@ -125,15 +125,6 @@ impl<'a> Ctx<'a> {
         });
     }
 
-    /// Open the Series screen with `app`'s card highlighted (NAV-3).
-    pub fn open_series(&mut self, app: AppId) {
-        self.nav = Some(NavRequest {
-            route: Route::Series,
-            carry: None,
-            focus_app: Some(app),
-        });
-    }
-
     /// The navigation requested so far this frame.
     pub fn pending(&self) -> Option<&NavRequest> {
         self.nav.as_ref()
