@@ -193,8 +193,9 @@ fn stable_regions(app: &App, route: Route, img: &RgbaImage) -> Vec<(Region, f64)
         (Route::RuleLab, true) => vec![
             (header, 2.6),
             (r("Rule spec"), 1.8),
+            (r("Run"), 2.6),
             (r("Script and analysis"), 6.2),
-            (("whole", full), 5.0),
+            (("whole", full), 3.2),
         ],
         (Route::Series, _) => vec![],
     }

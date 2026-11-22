@@ -26,7 +26,7 @@ use crate::layout::{self, Column};
 use crate::router::Route;
 use crate::widgets::flow::{FlowItem, flow};
 use crate::widgets::menu::{Menu, MenuItem, menu_button_state};
-use crate::widgets::text::{galley, lbl_row, text_top, wrapped};
+use crate::widgets::text::{css_line_height, galley, lbl_row, paint_line, wrapped};
 use crate::widgets::{
     BitRow, Card, CodeBlock, Icon, MiniButton, NbGrid, Plot, SegGroup, SegItem, SegStyle, Slider,
     StatTile, ghost, lbl, prim, verdict,
@@ -531,18 +531,19 @@ impl State {
             .iter()
             .map(|(s, f, c)| galley(ui, s, f.clone(), *c))
             .collect();
+        // each span is a CSS line box; `display: flex; flex-wrap: wrap; gap: 12px` (rows too)
+        let size = |i: usize| vec2(galleys[i].size().x, css_line_height(ui, &parts[i].1));
         let items = [
-            FlowItem::fixed(galleys[0].size()),
-            FlowItem::fixed(galleys[1].size()),
-            FlowItem::fixed(galleys[2].size()).auto(),
+            FlowItem::fixed(size(0)),
+            FlowItem::fixed(size(1)),
+            FlowItem::fixed(size(2)).auto(),
         ];
         let width = ui.available_width();
-        let lay = flow(&items, width, vec2(12.0, 6.0), 0.0);
+        let lay = flow(&items, width, vec2(12.0, 12.0), 0.0);
         let (rect, _) = ui.allocate_exact_size(vec2(width, lay.height), Sense::hover());
         for (i, ((s, _, c), g)) in parts.iter().zip(galleys).enumerate() {
             let r = lay.rects[i].translate(rect.min.to_vec2());
-            ui.painter()
-                .galley(pos2(r.left(), text_top(r.center().y, &g)), g, *c);
+            paint_line(ui.painter(), &g, r.left(), r.top(), r.height(), *c);
             ui.interact(r, ui.scope_id().with(("run-header", i)), Sense::hover())
                 .widget_info(|| WidgetInfo::labeled(Role::Label, true, s));
         }
