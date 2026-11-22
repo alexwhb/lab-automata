@@ -163,10 +163,11 @@ for line in open(log):
         n = int(line.split()[3].rstrip(";"))
         pkg, kind, name, src = current
         per_crate[pkg] = per_crate.get(pkg, 0) + n
-        if "/tests/e2e/" in src or "e2e" in name or "scenario" in name or pkg.endswith("e2e"):
+        if pkg == "ap-mcp" and kind == "test":
+            kinds["MCP"] += n  # through the real automata-mcp binary (its tests/e2e.rs too)
+        elif ("/tests/e2e/" in src or "e2e" in name or "scenario" in name or name == "journeys"
+              or pkg.endswith("e2e")):
             kinds["e2e"] += n
-        elif pkg == "ap-mcp" and kind == "test":
-            kinds["MCP"] += n
         elif pkg == "automata-playground" and kind == "test":
             kinds["GUI"] += n
         elif "snapshot" in name:
