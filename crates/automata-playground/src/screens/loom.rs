@@ -257,19 +257,6 @@ impl State {
         }
         self.ticker.reset();
     }
-
-    /// Advances the thread by the frame's time while weaving.
-    fn tick(&mut self, ctx: &Ctx) {
-        if !self.running {
-            return;
-        }
-        let dt = ctx.dt();
-        for _ in 0..self.ticker.steps(dt, self.speed) {
-            self.weave.weave();
-        }
-        self.spool_secs += f64::from(dt);
-        ctx.animate();
-    }
 }
 
 impl Screen for State {
@@ -320,8 +307,20 @@ impl Screen for State {
         true
     }
 
+    /// Advances the thread by the frame's time while weaving.
+    fn tick(&mut self, ctx: &mut Ctx) {
+        if !self.running {
+            return;
+        }
+        let dt = ctx.dt();
+        for _ in 0..self.ticker.steps(dt, self.speed) {
+            self.weave.weave();
+        }
+        self.spool_secs += f64::from(dt);
+        ctx.animate();
+    }
+
     fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
-        self.tick(ctx);
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => layout::bench(ui, ctx, self, |s, _ctx, stage| s.stage(stage)),
             _ => self.aside(ui),

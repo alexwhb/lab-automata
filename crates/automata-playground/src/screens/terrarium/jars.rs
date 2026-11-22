@@ -80,7 +80,7 @@ pub fn meter_color(liveliness: f64) -> eframe::egui::Color32 {
 impl State {
     /// The scrolling grid of jar cards on the stage.
     pub(super) fn jar_grid(&mut self, ui: &mut Ui) {
-        ScrollArea::vertical()
+        let out = ScrollArea::vertical()
             .id_salt("terrarium-jars")
             .auto_shrink([false, false])
             .show(ui, |ui| {
@@ -116,6 +116,8 @@ impl State {
                     Sense::hover(),
                 );
             });
+        // a Keep button scrolled into view inside the stage: the page follows (390 px)
+        crate::layout::bubble_scroll(ui, out.id, out.state.clamped_offset(), out.inner_rect);
     }
 
     /// One jar card at `rect`; returns whether its Keep button was pressed.

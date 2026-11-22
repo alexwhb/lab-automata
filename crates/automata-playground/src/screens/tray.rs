@@ -650,14 +650,17 @@ impl Screen for State {
         true
     }
 
-    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
-        self.receive_patterns(ctx);
+    fn tick(&mut self, ctx: &mut Ctx) {
         if self.running {
             let n = self.ticker.steps(ctx.dt(), self.speed);
             self.step_n(n);
             // nothing moves between generations: the next frame when the next one is due
             ctx.wake_in(self.ticker.due_in(self.speed));
         }
+    }
+
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
+        self.receive_patterns(ctx);
         self.tilt.step(ctx.dt());
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => self.rules_aside(ui),

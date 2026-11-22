@@ -202,19 +202,6 @@ impl State {
     fn send_to(&self, ctx: &mut Ctx, route: Route) {
         ctx.go_with(route, self.carry());
     }
-
-    /// Ticks the jars by the frame's time while running.
-    fn tick(&mut self, ctx: &Ctx) {
-        if !self.running {
-            return;
-        }
-        let dt = ctx.dt();
-        for _ in 0..self.ticker.steps(dt, 1.0 / TICK_SECS) {
-            self.terr.tick();
-        }
-        self.bob_secs += f64::from(dt);
-        ctx.animate();
-    }
 }
 
 impl Screen for State {
@@ -267,8 +254,20 @@ impl Screen for State {
         true
     }
 
+    /// Ticks the jars by the frame's time while running.
+    fn tick(&mut self, ctx: &mut Ctx) {
+        if !self.running {
+            return;
+        }
+        let dt = ctx.dt();
+        for _ in 0..self.ticker.steps(dt, 1.0 / TICK_SECS) {
+            self.terr.tick();
+        }
+        self.bob_secs += f64::from(dt);
+        ctx.animate();
+    }
+
     fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
-        self.tick(ctx);
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => layout::bench(ui, ctx, self, |s, _ctx, stage| s.jar_grid(stage)),
             _ => self.aside(ctx, ui),

@@ -311,6 +311,7 @@ impl AutomataApp {
             for cmd in commands(&egui_ctx) {
                 screen.command(cmd, &mut ctx);
             }
+            screen.tick(&mut ctx);
             nav = nav.or(ctx.nav.take());
         }
         self.entered = Some(route);

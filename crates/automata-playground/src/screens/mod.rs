@@ -17,8 +17,8 @@ pub mod tray;
 ///
 /// Call order each frame for the active screen: [`Screen::enter`] (only when the route has
 /// just become active, before anything else), [`Screen::command`] (for Space / `S`),
-/// [`Screen::header_actions`] (inside the header), then [`Screen::ui`] (the body under the
-/// header; benches call [`crate::layout::bench`], which calls [`Screen::tab_actions`]). After
+/// [`Screen::tick`] (time passes), [`Screen::header_actions`] (inside the header), then
+/// [`Screen::ui`] (the body under the header; benches call [`crate::layout::bench`], which calls [`Screen::tab_actions`]). After
 /// a navigation with a carry-over, the target gets `enter` then [`Screen::receive`].
 pub trait Screen {
     /// The body under the header. Lay it out with [`crate::layout::columns`].
@@ -31,6 +31,11 @@ pub trait Screen {
     /// The bench tab row's right-hand items (Playground benches only): call `slot.add(|ui|
     /// …)` once per item (each may wrap onto its own line), or `slot.hint("…")`.
     fn tab_actions(&mut self, _ctx: &mut Ctx, _slot: &mut RowSlot) {}
+
+    /// Advances the screen's simulation by the frame's time ([`Ctx::dt`]) while it runs. It
+    /// runs before anything is drawn, so the header's counters (`gen 0042`) and the body show
+    /// the same generation.
+    fn tick(&mut self, _ctx: &mut Ctx) {}
 
     /// A keyboard command (NAV-5). Return `true` if handled.
     fn command(&mut self, _cmd: Command, _ctx: &mut Ctx) -> bool {

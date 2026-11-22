@@ -21,7 +21,7 @@ use crate::screens::Screen;
 use crate::widgets::tabs::bench_tabs;
 use ap_theme as t;
 use eframe::egui::{
-    Align, Color32, CornerRadius, Id, Layout, Rect, ScrollArea, Stroke, Ui, UiBuilder,
+    Align, Color32, CornerRadius, Id, Layout, Rect, ScrollArea, Stroke, Ui, UiBuilder, Vec2,
     accesskit::Role, pos2, vec2,
 };
 use lab_ui::layout::{FlexItem, flex_lines};
@@ -334,6 +334,23 @@ fn paint_column(ui: &Ui, rect: Rect, c: &Column) {
     }
     if c.border_right {
         painter.vline(rect.right() - 0.5, rect.y_range(), stroke);
+    }
+}
+
+/// Passes a nested scroll area's scrolling on to the page. egui hands a scroll request
+/// (`scroll_to_me`, keyboard focus, AccessKit `ScrollIntoView`) to the innermost `ScrollArea`
+/// only; Chrome's `scrollIntoView` scrolls every ancestor. Call it after showing a scroll area
+/// that sits inside the page (the Terrarium's jar stage) with its id, offset and viewport:
+/// when the area scrolled this frame without the user's wheel or drag, the page brings its
+/// viewport into view too.
+pub fn bubble_scroll(ui: &Ui, id: Id, offset: Vec2, viewport: Rect) {
+    let key = id.with("bubble-scroll");
+    let before = ui.data(|d| d.get_temp::<Vec2>(key));
+    ui.data_mut(|d| d.insert_temp(key, offset));
+    let by_user =
+        ui.input(|i| i.smooth_scroll_delta != Vec2::ZERO || i.pointer.is_decidedly_dragging());
+    if before.is_some_and(|b| (b - offset).length() > 0.5) && !by_user {
+        ui.scroll_to_rect(viewport, None);
     }
 }
 

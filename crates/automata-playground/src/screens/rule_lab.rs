@@ -265,10 +265,7 @@ impl Screen for State {
         self.received = Some(carry);
     }
 
-    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
-        if self.lab.poll() || self.lab.is_running() {
-            ctx.animate();
-        }
+    fn tick(&mut self, ctx: &mut Ctx) {
         if self.playing {
             let rate = 1000.0 / PLAY_MS;
             for _ in 0..self.ticker.steps(ctx.dt(), rate) {
@@ -276,6 +273,12 @@ impl Screen for State {
             }
             // the next frame when the playhead's next generation is due
             ctx.wake_in(self.ticker.due_in(rate));
+        }
+    }
+
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
+        if self.lab.poll() || self.lab.is_running() {
+            ctx.animate();
         }
         layout::columns(ui, ctx, &COLUMNS, |ui, _ctx, i| match i {
             0 => self.spec_aside(ui),

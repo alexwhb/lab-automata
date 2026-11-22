@@ -250,12 +250,15 @@ impl Screen for State {
     }
     // NAV-4: a rule (+ RLE) handed over by another screen, after `enter`
     fn receive(&mut self, carry: Carry, ctx: &mut Ctx) { /* parse carry.rule / carry.rle */ ctx.toast("…"); }
-    // the body under the header
-    fn ui(&mut self, ctx: &mut Ctx, ui: &mut egui::Ui) {
+    // time passes (before anything is drawn, so the header's counter matches the body)
+    fn tick(&mut self, ctx: &mut Ctx) {
         if self.running {
             for _ in 0..self.ticker.steps(ctx.dt(), self.speed) { /* engine step */ }
-            ctx.animate();
+            ctx.wake_in(self.ticker.due_in(self.speed)); // the next frame when a step is due
         }
+    }
+    // the body under the header
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut egui::Ui) {
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => { /* rules aside: ui is top-down, padded, `gap` spacing, scrolls */ }
             1 => layout::bench(ui, ctx, self, |s, ctx, stage| { /* draw on the .graph stage */ }),
@@ -274,13 +277,15 @@ impl Screen for State {
   `AutomataApp::last_copied()` for tests); `ctx.save_text("glider-garden.rle", &rle)` → native
   save dialog in the app, `out_dir` in tests (`AutomataApp::saved_files()`), `Ok(None)` when
   cancelled.
-- **Time and randomness**: `ctx.dt()` (`stable_dt`, ≤ 0.1 s) + a `Ticker` per screen;
-  `ctx.animate()` while running; `ctx.rng_seed()` (7 in tests); `ctx.autoplay()`.
+- **Time and randomness**: step the engine in `Screen::tick` (called after `enter` /
+  `receive` / `command` and before the header, so every counter shows the same generation)
+  with `ctx.dt()` + a `Ticker` per screen; `ctx.rng_seed()` (7 in tests); `ctx.autoplay()`.
 - **Keyboard**: the app handles ⌘1–⌘4 and Tab order; screens get `Command::RunPause` /
   `Command::Step`; check `ctx.text_focus()` before treating other letters as shortcuts.
 - **Layout**: `layout::columns` with the mockup's column specs (CSS `flex` + `max-width`,
   border-box) — at 1440 they fill the window height under the header, at 390 they stack at
-  `route.panel_height()` and the page scrolls (heights match the 390 references: Tray 2759,
+  `route.panel_height()` (a `scroll` column grows to its content instead of scrolling, so
+  scroll requests reach the page) and the page scrolls (heights match the 390 references: Tray 2759,
   Loom 1915, Terrarium 1875, Rule lab 2899). Benches put `layout::bench` in their main
   column; the Rule lab uses `Column::main(..).pad(16.0, 16.0).gap(14.0).scroll(true)`.
 - **Accessibility**: use the widgets (they set roles, names, pressed / disabled, focus ring,
