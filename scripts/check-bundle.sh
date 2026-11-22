@@ -18,6 +18,9 @@
 #    starting with `SMOKE ` (e.g. `SMOKE first_frame_ms=412 frames=180 …`) — headless
 #    (AUTOMATA_HEADLESS=1) and, unless --no-window, in a real window; then the same through
 #    LaunchServices (`open -n … --args --smoke 3`). No output line may mention the checkout.
+# 4. Opening a pattern (TRAY-9, unless --no-window; SKIP without a window server): `open -n -a
+#    <copy> glider.rle` hands the file over as the Apple Event odoc; the app must log
+#    `opened pattern <path>` (it arms the pattern on the Tray as a stamp), then quit on SIGTERM.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 repo="$(pwd -P)"
@@ -29,7 +32,7 @@ window=1
 for a in "$@"; do
   case "$a" in
     --no-window) window=0 ;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) app="$a" ;;
   esac
 done
@@ -195,6 +198,7 @@ SB
         sandbox-exec -f "$profile" "$copy/Contents/MacOS/automata-playground" --smoke 3 ) \
         > "$log" 2>&1 || status=$?
     line=$(grep '^SMOKE ' "$log" | tail -1 || true)
+    smoke_mode=$(sed -n 's/.* mode=\([a-z]*\).*/\1/p' <<<"$line")
     if [ $status -ne 0 ] || [ -z "$line" ]; then
       bad "$label (exit $status$([ $status -eq 142 ] && echo ", killed after ${secs} s")): ${line:-no SMOKE line}"
       sed 's/^/        /' "$log" | tail -15
@@ -208,8 +212,10 @@ SB
     fi
   }
   smoke "headless (AUTOMATA_HEADLESS=1), 3 s" 15 AUTOMATA_HEADLESS=1
+  window_mode=""
   if [ $window -eq 1 ]; then
     smoke "in a real window (wgpu), 3 s" 20
+    window_mode="$smoke_mode"
   fi
 
   if [ $window -eq 1 ]; then
@@ -226,6 +232,37 @@ SB
     if [ -n "$line" ]; then ok "open → SMOKE line"; echo "        $line"; else bad "no SMOKE line within 20 s of \`open\` (log: $(tail -3 "$log" | tr '\n' ' '))"; fi
     for _ in $(seq 1 50); do pgrep -f "$copy/Contents/MacOS/automata-playground" >/dev/null || break; sleep 0.1; done
     if pgrep -f "$copy/Contents/MacOS/automata-playground" >/dev/null; then bad "the app was still running 5 s after its smoke run"; else ok "exited by itself"; fi
+
+    section "Opening a pattern (Apple Event odoc: open -a … glider.rle)"
+    if [ "$window_mode" != window ]; then
+      skip "no window server (the window smoke run ran ${window_mode:-no} mode); open -a needs one"
+    else
+      # the real app, not a smoke run: its own HOME (no saved state, no files of the user's) and
+      # no MCP bridge (the user's running app may own the socket)
+      log="$scratch/open-pattern.log"
+      : > "$log"
+      mkdir -p "$scratch/home"
+      open -n -F --env HOME="$scratch/home" --env AUTOMATA_MCP_SOCKET=off --env RUST_LOG=info \
+        --stdout "$log" --stderr "$log" -a "$copy" "$scratch/glider.rle" || bad "open -a failed"
+      opened=""
+      for _ in $(seq 1 150); do
+        opened=$(grep -F "opened pattern" "$log" | grep -F "glider.rle" | head -1 || true)
+        [ -n "$opened" ] && break
+        sleep 0.1
+      done
+      if [ -n "$opened" ]; then
+        ok "open -a $name.app glider.rle arms it on the Tray (${opened##*] })"
+      else
+        bad "the app did not open the pattern it was handed (log: $(tail -3 "$log" | tr '\n' ' '))"
+      fi
+      if grep -qF "$repo" "$log"; then bad "the app log mentions the checkout"; fi
+      pid=$(pgrep -f "$copy/Contents/MacOS/automata-playground" | head -1 || true)
+      if [ -n "$pid" ]; then
+        kill -TERM "$pid" 2>/dev/null || true
+        for _ in $(seq 1 50); do kill -0 "$pid" 2>/dev/null || break; sleep 0.1; done
+        if kill -0 "$pid" 2>/dev/null; then kill -KILL "$pid" 2>/dev/null || true; bad "the app did not quit on SIGTERM"; else ok "quit"; fi
+      fi
+    fi
   fi
 fi
 
