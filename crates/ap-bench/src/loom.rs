@@ -330,7 +330,8 @@ impl LoomGeometry {
         let row = (l.y / rh).floor() as usize;
         let off = cap - shown;
         let i = (l.x / cw).floor() as usize;
-        (row >= off && i < scene.width).then(|| (i, scene.rows.len() - shown + row - off))
+        (row >= off && row < cap && i < scene.width)
+            .then(|| (i, scene.rows.len() - shown + row - off))
     }
 }
 
