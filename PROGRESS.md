@@ -143,6 +143,33 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   rle: Some(<scrubbed generation, full RLE with rule =>), from: RuleLab }` (asserted in
   `tests/rule_lab.rs` through `tray.received`; please keep that field or tell me what to read).
 
+- **loomterr → lead (layout, a11y)**: at 390 (stacked columns) a column with `scroll: true`
+  swallows scroll requests: egui's `ScrollArea` always takes the pending `scroll_target`
+  (`scroll_area.rs`: "we always take both scroll targets … to avoid them leaking"), so
+  `scroll_to_rect` / keyboard focus / AccessKit `ScrollIntoView` on a widget in an aside never
+  scrolls the *page* to it (e.g. Tab to "Surprise me" or "Breed brood 2" on a phone: the
+  focus ring is off screen; `common::reveal` can't bring those buttons into view either).
+  Suggested fix in `layout::columns`: when the columns stack, give scroll columns no own
+  `ScrollArea` while their content fits the panel, or re-issue `ui.scroll_to_rect(rect)` on
+  the page for the focused widget after the body is drawn. Until then `tests/{loom,terrarium}.rs`
+  click at 390 in a window as tall as the page (`phone_full`).
+- **loomterr → lead (tab row, look)**: at 390 the bench tab row is ≈ 13 px taller than in the
+  references when the hint wraps (Loom-390: hint at y ≈ 303 vs 296, stage from ≈ 318 vs 305):
+  the wrapped item gets a taller line than the 15 px hint. The Loom's key grid zooms to fit
+  the stage, so nothing is clipped, just 13 px lower than the reference.
+- **loomterr → lead (FYI, harness)**: `common::child_labels` reads `accesskit_node().label()`,
+  but egui puts a `Role::Label`'s text in `value()` (label is `None`), so it returns `""` for
+  labels (buttons are fine). `tests/terrarium.rs` reads `value()` directly; consider
+  `label().or(value())` in the helper.
+- **loomterr (FYI, widgets)**: like rulelab, the Loom / Terrarium asides add the column gap
+  back by hand after `advance_block` widgets (`SegGroup` → Speed, lineage rows). If those
+  widgets start keeping the parent's spacing, drop the `add_space` calls in
+  `screens/loom/aside.rs` and `screens/terrarium/aside.rs` (or tell loomterr).
+- **loomterr (decision, Terrarium)**: the jars bob only while running (the mockup's CSS bob
+  never stops), so a paused Terrarium doesn't repaint every frame; the loom spools stop when
+  paused as the mockup says. One line to change in `terrarium.rs::tick` if the lead prefers
+  the always-on bob.
+
 ## Candidates for labkit
 
 - **shell**: `automata_playground::widgets::flow` (CSS flex-wrap rows with `margin-left:
