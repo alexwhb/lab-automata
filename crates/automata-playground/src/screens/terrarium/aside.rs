@@ -72,7 +72,11 @@ impl State {
         if self.terr.lineage().is_empty() {
             dashed_note(ui, NOTHING_BRED);
         } else {
-            for entry in self.terr.lineage().newest_first() {
+            for (k, entry) in self.terr.lineage().newest_first().enumerate() {
+                if k > 0 {
+                    // rows advance like CSS blocks (no item spacing): add the gap between
+                    ui.add_space(ui.spacing().item_spacing.y);
+                }
                 lineage_row(ui, entry);
             }
         }

@@ -86,6 +86,8 @@ impl State {
         {
             self.pick_first_row(FirstRow::ALL[i]);
         }
+        // the group advances like a CSS block (no item spacing after it): add the gap
+        ui.add_space(ui.spacing().item_spacing.y);
         let mut speed = self.speed;
         let text = format!("{} rows/s", speed.round() as u32);
         if Slider::new("Speed", &mut speed, SPEED_RANGE)
