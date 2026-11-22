@@ -308,7 +308,11 @@ impl Screen for State {
   clicks by label / role (scrolling targets into view), reads `pressed` / `selected` /
   `disabled`, presses keys (`press`, `press_cmd`), steps (`step_until`), reads `toasts`, and
   renders (`render`, `render_full`, `screenshot`). `scripts/compare-mockup.sh` writes
-  `[app | mockup]` PNGs to `target/compare/`.
+  `[app | mockup]` PNGs to `target/compare/` with each screen in its reference's state;
+  `tests/compare.rs::screens_stay_close_to_their_mockups` bounds the mean |Δ| of the stable
+  regions at 1440 and 390; `scripts/screenshots.sh` renders `docs/screenshots/`.
+  `tests/journeys.rs` holds the end-to-end journeys across screens (AccessKit and real input
+  only, checked against independent engine runs).
 
 
 ### Screen control API
