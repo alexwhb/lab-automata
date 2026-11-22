@@ -157,11 +157,8 @@ fn disabled_controls_report_disabled() {
 fn tab_key_walks_in_reading_order() {
     let mut h = harness(Route::Tray);
     let mut order = Vec::new();
-    for _ in 0..19 {
-        press(&mut h, egui::Key::Tab);
-        settle(&mut h);
-        order.push(focused_label(&h).unwrap_or_default());
-    }
+    // Reading order = the mockup's DOM order: header, the rules aside (cartridges, stamps),
+    // then the bench tab row (tabs, tools).
     let expected = [
         "Automata Playground",
         "Playground",
@@ -174,6 +171,20 @@ fn tab_key_walks_in_reading_order() {
         "Step",
         "Restart",
         "Share",
+        "Life",
+        "HighLife",
+        "Seeds",
+        "Day & Night",
+        "Maze",
+        "Coral",
+        "Glider",
+        "Spaceship",
+        "Pulsar",
+        "Pentadecathlon",
+        "R-pentomino",
+        "Acorn",
+        "Glider gun",
+        "Replicator",
         "Tray · 2D",
         "Loom · 1D",
         "Terrarium · breed",
@@ -183,6 +194,11 @@ fn tab_key_walks_in_reading_order() {
         "Random soup",
         "Clear",
     ];
+    for _ in 0..expected.len() {
+        press(&mut h, egui::Key::Tab);
+        settle(&mut h);
+        order.push(focused_label(&h).unwrap_or_default());
+    }
     assert_eq!(order, expected);
 
     let mut h = harness(Route::Tray);
