@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # scripts/test-all.sh — the single green-light command (SPEC DONE-4).
 #
-#   fmt         cargo fmt --all --check
+#   fmt         cargo fmt --check: every workspace crate (not --all, which also checks local path
+#               dependencies, i.e. ../labkit, another team's live work)
 #   lint        shellcheck --severity=warning scripts/*.sh (skipped without shellcheck)
 #   clippy      cargo clippy --workspace --all-targets -D warnings
 #   test        cargo test --workspace: engine unit, reference (REF) and golden tests, headless
@@ -104,7 +105,7 @@ echo
 
 # ------------------------------------------------------------------ fmt
 if skipped fmt; then skip_step "fmt" "SKIP"; else
-  run_step "fmt --all --check" fmt cargo fmt --all --check
+  run_step "fmt --check (workspace crates)" fmt cargo fmt --check
 fi
 
 # ------------------------------------------------------------------ lint (shell scripts)
