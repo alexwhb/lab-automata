@@ -195,10 +195,19 @@ impl<'a> Ctx<'a> {
         self.services.autoplay
     }
 
-    /// The frame's time step in seconds (`stable_dt`, capped at 0.1 s so a stall doesn't
-    /// jump the simulation). Accumulate it with a [`Ticker`].
+    /// The frame's time step in seconds. Accumulate it with a [`Ticker`].
+    ///
+    /// After a frame that asked for this one ([`Ctx::animate`], [`Ctx::wake_in`]) it is the
+    /// time that really passed, capped at [`MAX_DT`] (or the wait asked for plus [`SLACK`]) so
+    /// a stall doesn't jump the simulation; after an idle stretch it is egui's `stable_dt`
+    /// (≤ [`MAX_DT`]), so pressing Run doesn't fast-forward. (egui's own `stable_dt` alone
+    /// would be wrong for delayed frames: it falls back to a predicted 1/60 s.)
     pub fn dt(&self) -> f32 {
-        self.egui.input(|i| i.stable_dt).min(0.1)
+        let before = self.pacing().before;
+        self.egui.input(|i| match before {
+            Some(wait) => i.unstable_dt.clamp(0.0, (wait + SLACK).max(MAX_DT)),
+            None => i.stable_dt.clamp(0.0, MAX_DT),
+        })
     }
 
     /// True while a text field has keyboard focus (don't treat letters as shortcuts).
@@ -216,9 +225,90 @@ impl<'a> Ctx<'a> {
         &self.egui
     }
 
-    /// Ask for another frame soon (call it every frame while running).
+    /// Ask for the next frame at display rate, for motion that changes every frame (a tilt
+    /// transition, spinning spools, bobbing jars): call it every frame while it moves. Vsync
+    /// paces those frames while the window is visible; while it is hidden (occluded or
+    /// minimised) eframe doesn't paint, so nothing would wait for vsync and the app would
+    /// spin a core: then frames come every [`HIDDEN_FRAME`] seconds instead.
+    ///
+    /// A simulation that only changes when its next step is due uses [`Ctx::wake_in`].
     pub fn animate(&self) {
-        self.egui.request_repaint();
+        let hidden = self.egui.input(|i| i.viewport().visible() == Some(false));
+        if hidden {
+            self.wake_in(HIDDEN_FRAME);
+        } else {
+            self.egui.request_repaint();
+            self.asked(0.0);
+        }
+    }
+
+    /// Ask for the next frame in `secs` seconds (when a running simulation's next step is
+    /// due: `ctx.wake_in(ticker.due_in(speed))`) and draw nothing until then unless input
+    /// arrives. Waits are capped at [`MAX_WAIT`], so a running screen still draws a few
+    /// frames a second and [`Ctx::dt`] keeps its time.
+    pub fn wake_in(&self, secs: f32) {
+        let wait = if secs.is_nan() {
+            MAX_WAIT
+        } else {
+            secs.clamp(0.0, MAX_WAIT)
+        };
+        self.egui.request_repaint_after_secs(wait);
+        self.asked(wait);
+    }
+
+    /// This pass's [`Pacing`] record (rolled over from the pass before).
+    fn pacing(&self) -> Pacing {
+        let pass = self.egui.cumulative_pass_nr();
+        let p = self
+            .egui
+            .data(|d| d.get_temp::<Pacing>(Pacing::id()))
+            .unwrap_or_default();
+        if p.pass == pass {
+            p
+        } else {
+            Pacing {
+                pass,
+                asked: None,
+                before: if p.pass + 1 == pass { p.asked } else { None },
+            }
+        }
+    }
+
+    /// Notes that this pass asked for a frame in `wait` seconds.
+    fn asked(&self, wait: f32) {
+        let mut p = self.pacing();
+        p.asked = Some(p.asked.map_or(wait, |a| a.min(wait)));
+        self.egui.data_mut(|d| d.insert_temp(Pacing::id(), p));
+    }
+}
+
+/// The longest [`Ctx::dt`] after a frame at display rate (s): a stall doesn't jump the
+/// simulation.
+pub const MAX_DT: f32 = 0.1;
+/// The longest wait [`Ctx::wake_in`] asks for (s): a running screen draws at least 10 frames
+/// a second.
+pub const MAX_WAIT: f32 = 0.1;
+/// How late a frame asked for with [`Ctx::wake_in`] may come and still keep its time (s):
+/// event-loop latency and a vsync interval.
+pub const SLACK: f32 = 0.02;
+/// The frame interval of [`Ctx::animate`] while the window is hidden (s).
+pub const HIDDEN_FRAME: f32 = 0.1;
+
+/// The frames asked for in a pass, kept in egui's temporary memory so [`Ctx::dt`] knows
+/// whether (and how far ahead) the pass before scheduled this one.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct Pacing {
+    /// The pass (`egui::Context::cumulative_pass_nr`) this record is about.
+    pass: u64,
+    /// The shortest wait asked for in `pass` (`None`: no frame asked for).
+    asked: Option<f32>,
+    /// What the pass before `pass` asked for.
+    before: Option<f32>,
+}
+
+impl Pacing {
+    fn id() -> egui::Id {
+        egui::Id::unique("automata-playground/pacing")
     }
 }
 
@@ -254,6 +344,16 @@ impl Ticker {
     pub fn reset(&mut self) {
         self.acc = 0.0;
     }
+
+    /// Seconds until the next step at `rate` is due (what to pass to [`Ctx::wake_in`]);
+    /// infinite for a rate of 0.
+    pub fn due_in(&self, rate: f32) -> f32 {
+        if rate > 0.0 && rate.is_finite() {
+            (1.0 / rate - self.acc).max(0.0)
+        } else {
+            f32::INFINITY
+        }
+    }
 }
 
 #[cfg(test)]
@@ -270,6 +370,119 @@ mod tests {
         assert_eq!(t.steps(10.0, 30.0), Ticker::MAX_STEPS);
         assert_eq!(t.steps(0.0, 30.0), 0);
         assert_eq!(t.steps(1.0, 0.0), 0);
+    }
+
+    #[test]
+    fn ticker_says_when_the_next_step_is_due() {
+        let mut t = Ticker::default();
+        assert!((t.due_in(10.0) - 0.1).abs() < 1e-6);
+        assert_eq!(t.steps(0.03, 10.0), 0);
+        assert!((t.due_in(10.0) - 0.07).abs() < 1e-6);
+        assert_eq!(t.steps(0.07, 10.0), 1);
+        assert!((t.due_in(10.0) - 0.1).abs() < 1e-4);
+        assert_eq!(t.due_in(0.0), f32::INFINITY);
+    }
+
+    /// Runs one egui pass at `time` (window hidden or not) with a `Ctx` handed to `f`;
+    /// returns the repaint delay the pass asked for.
+    fn pass(
+        egui: &egui::Context,
+        time: f64,
+        hidden: bool,
+        mut f: impl FnMut(&Ctx),
+    ) -> std::time::Duration {
+        let services = Services {
+            launcher: Launcher::recording(&[]),
+            out_dir: std::env::temp_dir(),
+            save_dialog: false,
+            rng_seed: 7,
+            autoplay: false,
+        };
+        let (mut toasts, mut outbox) = (Toasts::default(), Outbox::default());
+        let mut raw = egui::RawInput {
+            time: Some(time),
+            ..Default::default()
+        };
+        if hidden {
+            let info = raw.viewports.entry(egui::ViewportId::ROOT).or_default();
+            info.occluded = Some(true);
+            info.minimized = Some(false);
+        }
+        let mut out = egui.run_ui(raw, |_ui| {
+            let ctx = Ctx {
+                route: Route::Tray,
+                last_bench: Route::Tray,
+                nav: None,
+                toasts: &mut toasts,
+                services: &services,
+                outbox: &mut outbox,
+                egui: egui.clone(),
+                body_height: 600.0,
+            };
+            f(&ctx);
+        });
+        out.textures_delta.clear();
+        out.viewport_output[&egui::ViewportId::ROOT].repaint_delay
+    }
+
+    /// Delayed frames keep the time that really passed (egui's `stable_dt` would say 1/60 s),
+    /// stalls are capped, idle stretches don't count, and a hidden window doesn't spin.
+    #[test]
+    fn frames_are_paced_and_dt_follows_them() {
+        let egui = egui::Context::default();
+        let close = |a: f32, b: f32| (a - b).abs() < 1e-3;
+        let mut dt = -1.0;
+        let ms = |d: std::time::Duration| d.as_secs_f32() * 1e3;
+
+        // egui repaints its first passes anyway
+        pass(&egui, 0.1, false, |_| {});
+        pass(&egui, 0.2, false, |_| {});
+        // wake_in: a repaint in that many seconds, at most MAX_WAIT
+        assert!(close(
+            ms(pass(&egui, 1.0, false, |c| c.wake_in(0.08))),
+            80.0
+        ));
+        let delay = pass(&egui, 1.09, false, |c| {
+            dt = c.dt();
+            c.wake_in(5.0);
+        });
+        assert!(close(dt, 0.09), "a delayed frame keeps its 90 ms: {dt}");
+        assert!(close(ms(delay), MAX_WAIT * 1e3), "waits are capped");
+        pass(&egui, 1.19, false, |c| {
+            dt = c.dt();
+            c.wake_in(0.1);
+        });
+        assert!(close(dt, 0.1));
+        // a stall after a wait of 0.1 s counts as 0.1 + SLACK
+        pass(&egui, 3.0, false, |c| {
+            c.animate();
+            dt = c.dt(); // asking first doesn't change what this frame was
+        });
+        assert!(close(dt, 0.1 + SLACK), "{dt}");
+
+        // animate: an immediate repaint; dt capped at MAX_DT
+        assert_eq!(
+            pass(&egui, 3.05, false, |c| {
+                dt = c.dt();
+                c.animate();
+            }),
+            std::time::Duration::ZERO
+        );
+        assert!(close(dt, 0.05));
+        pass(&egui, 3.5, false, |c| dt = c.dt());
+        assert!(close(dt, MAX_DT));
+
+        // idle (nothing asked for; egui draws one more frame after a repaint request), then a
+        // frame 10 s later: not a jump
+        pass(&egui, 3.52, false, |_| {});
+        pass(&egui, 13.5, false, |c| dt = c.dt());
+        assert!(dt <= 1.0 / 60.0 + 1e-4, "after idling: {dt}");
+
+        // hidden: animate asks for a frame in HIDDEN_FRAME, and dt keeps that time
+        let delay = pass(&egui, 14.0, true, |c| c.animate());
+        assert!(close(ms(delay), HIDDEN_FRAME * 1e3), "{delay:?}");
+        pass(&egui, 14.1, true, |c| dt = c.dt());
+        assert!(close(dt, HIDDEN_FRAME));
     }
 
     #[test]
