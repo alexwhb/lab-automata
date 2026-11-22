@@ -6,8 +6,8 @@
 |---|---|---|
 | 0 | repo, spec, architecture, mockup + references, `ap-theme` | done (lead) |
 | 1 | `ap-engine` · app shell + widgets + Series · `ap-bench` | done |
-| 2 | Tray · Loom + Terrarium · Rule lab | in progress |
-| 3 | MCP · end-to-end + visual pass at 1440 / 390 · bundle, README, test-all | not started |
+| 2 | Tray · Loom + Terrarium · Rule lab | done |
+| 3 | MCP · platform polish · layout fixes + visual pass + e2e journeys + README · packaging · independent review + fixes | done |
 
 ## Decisions (lead, 2026-11-22)
 
