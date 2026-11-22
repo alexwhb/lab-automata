@@ -621,3 +621,27 @@ fn renders_at_1440_and_390() {
     let full = render_full(Route::RuleLab, PHONE_W, 2899.0);
     assert!(full.height() >= 2899);
 }
+
+/// The states the mockup doesn't show render too: script errors and the open Export menu.
+#[test]
+fn renders_errors_and_the_export_menu() {
+    let mut h = lab();
+    let good = RuleScript::default().to_text();
+    retype(
+        &mut h,
+        &good
+            .replace("B3/S23", "B3/Q23")
+            .replace("boundary=torus", "boundary=tor"),
+    );
+    assert_eq!(h.state().screens().rule_lab.errors().len(), 2);
+    screenshot(&mut h, "rule-lab-errors");
+    blur(&mut h);
+    click_button(&mut h, "Export");
+    let menu = get(&h, "Export", Role::Menu).rect();
+    let button = get(&h, "Export", Role::Button).rect();
+    assert!(
+        menu.top() >= button.center().y && menu.right() <= W + 0.5,
+        "{menu:?}"
+    );
+    screenshot(&mut h, "rule-lab-export-menu");
+}
