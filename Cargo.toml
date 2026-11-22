@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/ap-theme",
+    "crates/ap-bench",
 ]
 
 [workspace.package]
@@ -26,6 +27,7 @@ lab-ui = { path = "../labkit/crates/lab-ui" }
 lab-mcp = { path = "../labkit/crates/lab-mcp", default-features = false }
 # This workspace's crates.
 ap-theme = { path = "crates/ap-theme" }
+ap-bench = { path = "crates/ap-bench" }
 
 [profile.dev]
 opt-level = 1

@@ -1,0 +1,20 @@
+[package]
+name = "ap-bench"
+description = "Automata Playground's 2.5D bench: CSS-exact perspective projection with inverse hit-testing, and the tray, loom, terrarium jar and top-down grid scenes drawn as batched egui meshes."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+egui = { workspace = true }
+ap-theme = { workspace = true }
+lab-ui = { workspace = true }
+
+[dev-dependencies]
+eframe = { workspace = true }
+egui_kittest = { workspace = true }
+serde_json = { workspace = true }
+
+[[example]]
+name = "scenes"
