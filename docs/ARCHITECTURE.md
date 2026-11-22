@@ -293,3 +293,23 @@ impl Screen for State {
 `automata-mcp` (crate `ap-mcp`) follows `../chem-playground/crates/chem-mcp`: engine tools run
 in-process; app tools forward to the running app over `lab_mcp::bridge` (socket path from
 `AUTOMATA_MCP_SOCKET`, default under the user's runtime dir).
+
+## Packaging and `test-all`
+
+- `scripts/test-all.sh [--quick]` (`SKIP=fmt,lint,clippy,test,perf,bundle`): fmt, shellcheck,
+  clippy `-D warnings`, `cargo test --workspace` (counted per crate; GUI = the app's integration
+  tests, e2e = `tests/e2e/` or targets named `*scenario*` / `*e2e*`, MCP = `ap-mcp`'s tests),
+  release perf gates, bundle. **Perf tests** live in a crate's `tests/perf.rs`, are
+  `#[ignore]`d and print `<label>: <n> ms …` (ap-bench: `tray (…)` / `loom (…)` < 2 ms);
+  ap-engine's `examples/lab_timing.rs` prints `worst: <n> ms per 400-generation run` (< 30 ms).
+- `scripts/bundle-macos.sh [--dmg] [--check]` → `dist/Automata Playground.app`
+  (`dev.labseries.AutomataPlayground`, Info.plist from `packaging/Info.plist.in`, icon
+  `assets/icon/Automata Playground.icns` rendered from `automata-icon.svg` by
+  `assets/icon/render-icon.mjs`). Built with **`AUTOMATA_BUNDLE=1`**: crates must not embed
+  `env!("CARGO_MANIFEST_DIR")` when `option_env!("AUTOMATA_BUNDLE")` is set (the bundle may
+  contain no path of the build machine). `automata-mcp` goes into `Contents/MacOS/` once a
+  package has that `[[bin]]`.
+- **Smoke contract** (`scripts/check-bundle.sh`, `test-all` start-up gate):
+  `automata-playground --smoke <seconds>` runs the Tray for N seconds in a window (headless
+  with `AUTOMATA_HEADLESS=1` or without a display), prints one line starting `SMOKE ` with at
+  least `first_frame_ms=` and `frames=`, and exits 0; no persistence, no reads of the checkout.
