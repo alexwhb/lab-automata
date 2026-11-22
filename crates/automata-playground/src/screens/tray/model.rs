@@ -151,8 +151,9 @@ impl Model {
         self.reset_counters();
     }
 
-    /// Clears the tray and places `pattern` centred on it (wrapping), counters reset. Returns
-    /// whether the pattern had to be cropped to fit the tray (see [`fit_to_tray`]).
+    /// Clears the tray and places `pattern`'s box centred on it (wrapping), counters reset: a
+    /// 40 × 26 pattern lands cell for cell. Returns whether the pattern had to be cropped to fit
+    /// the tray (see [`fit_to_tray`]).
     pub fn load_pattern(&mut self, pattern: &Pattern) -> bool {
         let (fitted, cropped) = fit_to_tray(pattern);
         self.grid.clear();
@@ -186,10 +187,14 @@ impl Model {
     }
 }
 
-/// `pattern` trimmed to its live cells and, if it is still larger than the tray, cut to the
-/// tray-sized window around its centre (a carried 64 × 40 Rule-lab frame would otherwise
-/// wrap onto itself). Returns the pattern and whether anything was cut away.
+/// `pattern` as it is when it fits the tray (so a whole-tray RLE from [`Model::rle`] loads
+/// back cell for cell); otherwise trimmed to its live cells and, if that is still larger than
+/// the tray, cut to the tray-sized window around its centre (a carried 64 × 40 Rule-lab frame
+/// would otherwise wrap onto itself). Returns the pattern and whether anything was cut away.
 pub fn fit_to_tray(pattern: &Pattern) -> (Pattern, bool) {
+    if pattern.width() <= TRAY_W && pattern.height() <= TRAY_H {
+        return (pattern.clone(), false);
+    }
     let p = pattern.trimmed();
     if p.width() <= TRAY_W && p.height() <= TRAY_H {
         return (p, false);

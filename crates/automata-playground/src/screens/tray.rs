@@ -79,8 +79,11 @@ pub const SPEED_RANGE: std::ops::RangeInclusive<f32> = 1.0..=30.0;
 pub const DEFAULT_SPEED: f32 = 10.0;
 /// The tray tilt's transition (the mockup's `transition: transform .4s ease`).
 pub const TILT_SECS: f32 = 0.4;
-/// Pasted / dropped files larger than this are refused.
+/// Pasted text and dropped / opened files larger than this are refused.
 const MAX_PATTERN_BYTES: u64 = 4 << 20;
+/// Patterns with more live cells than this aren't armed as a stamp: ten trays' worth (the tray
+/// holds 1 040), and the preview paints every cell each frame.
+pub const MAX_STAMP_CELLS: usize = 10_000;
 
 /// Which stamp the Stamp tool places.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -307,9 +310,12 @@ impl State {
         self.speed
     }
 
-    /// Sets the speed (clamped to 1–30 gen/s).
+    /// Sets the speed (clamped to 1–30 gen/s; NaN and infinities are ignored, as they would
+    /// stall the ticker).
     pub fn set_speed(&mut self, speed: f32) {
-        self.speed = speed.clamp(*SPEED_RANGE.start(), *SPEED_RANGE.end());
+        if speed.is_finite() {
+            self.speed = speed.clamp(*SPEED_RANGE.start(), *SPEED_RANGE.end());
+        }
     }
 
     /// Ghost trails on?
@@ -489,9 +495,15 @@ impl State {
             (pastes, i.raw.dropped_files.clone())
         });
         for text in pastes {
+            if text.len() as u64 > MAX_PATTERN_BYTES {
+                ctx.toast("The pasted text is too large for a pattern (over 4 MB)");
+                continue;
+            }
             match pattern::parse_any(&text) {
                 Ok(file) if !file.pattern.is_empty() => {
-                    let note = self.arm_parsed(file, "Pasted pattern");
+                    let note = self
+                        .arm_parsed(file, "Pasted pattern")
+                        .unwrap_or_else(|why| why);
                     ctx.toast(note);
                 }
                 Ok(_) => ctx.toast("The clipboard's pattern has no live cells"),
@@ -543,15 +555,16 @@ impl State {
                     .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())
                     .unwrap_or_else(|| name.clone());
-                Ok(self.arm_parsed(f, &stem))
+                self.arm_parsed(f, &stem)
             }
             Ok(_) => Err(format!("{name} has no live cells")),
             Err(e) => Err(format!("Couldn't read {name}: {e}")),
         }
     }
 
-    /// Arms a parsed file (named by its `#N` / `!Name:`, else `fallback`); returns the toast.
-    fn arm_parsed(&mut self, file: PatternFile, fallback: &str) -> String {
+    /// Arms a parsed file (named by its `#N` / `!Name:`, else `fallback`) unless it has more
+    /// than [`MAX_STAMP_CELLS`] live cells; returns the toast (`Err`: why it wasn't armed).
+    fn arm_parsed(&mut self, file: PatternFile, fallback: &str) -> Result<String, String> {
         let name = file
             .name
             .as_deref()
@@ -559,8 +572,17 @@ impl State {
             .filter(|n| !n.is_empty())
             .unwrap_or(fallback)
             .to_string();
+        let cells = file.pattern.population();
+        if cells > MAX_STAMP_CELLS {
+            return Err(format!(
+                "{name} has {cells} live cells; a stamp can have at most {MAX_STAMP_CELLS} (the tray holds {})",
+                TRAY_W * TRAY_H
+            ));
+        }
         self.arm(name.clone(), &file.pattern);
-        format!("Armed {name} as a stamp: click the tray to place it")
+        Ok(format!(
+            "Armed {name} as a stamp: click the tray to place it"
+        ))
     }
 }
 

@@ -33,8 +33,8 @@ use crate::widgets::{
 };
 use ap_bench::{TopCell, TopDownGrid};
 use ap_engine::{
-    Boundary, CellChange, LifeRule, NeighbourhoodPreset, Report, RuleScript, RunSpec, ScriptError,
-    Seed,
+    Boundary, CellChange, LifeRule, Neighbourhood, NeighbourhoodPreset, Report, RuleScript,
+    RunSpec, ScriptError, Seed,
 };
 use ap_theme as t;
 use eframe::egui::{
@@ -342,6 +342,17 @@ impl State {
     /// NAV-4: the Tray gets the rule and the scrubbed generation's cells (of the spec in
     /// effect: a background run is waited for).
     fn open_in_playground(&mut self, ctx: &mut Ctx) {
+        // the carry is a rulestring the Tray reads as Moore r1: another neighbourhood would
+        // arrive as a different rule (or not parse), so say so and stay
+        let nb = self.lab.spec().rule.neighbourhood();
+        if nb != Neighbourhood::MOORE {
+            ctx.toast(format!(
+                "The Tray runs Moore r1 rules; this rule uses {} ({} cells). Pick Moore r1 to open it in the Playground.",
+                nb.name(),
+                nb.len()
+            ));
+            return;
+        }
         self.finish();
         let code = self.lab.spec().rule.code();
         ctx.go_with(

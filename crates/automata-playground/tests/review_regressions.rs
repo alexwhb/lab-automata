@@ -2,7 +2,7 @@
 //! and the MCP bridge). Each test names its finding; the reviewer's reproductions are ported
 //! as they were, against the real app in egui_kittest and a real bridge client.
 
-use ap_engine::{RuleScript, RunSpec, Seed};
+use ap_engine::{LifeRule, Neighbourhood, RuleScript, RunSpec, Seed};
 use automata_playground::control;
 use automata_playground::screens::rule_lab::model::Lab;
 use automata_playground::{AppOptions, AutomataApp, Carry, Route};
@@ -482,4 +482,259 @@ fn a_carry_survives_a_bridge_navigation_in_the_next_frame() {
     let got = tray.received.as_ref().expect("the Tray got the carry");
     assert_eq!(got.rule, chosen);
     assert_eq!(tray.rule().code(), chosen);
+}
+
+// ---- Tray: pointer (finding 2) --------------------------------------------------------------
+
+fn toasts(h: &App) -> Vec<String> {
+    h.state()
+        .toasts()
+        .items()
+        .iter()
+        .map(|t| t.text.clone())
+        .collect()
+}
+
+/// A cleared, paused Tray with the pointer resting over cell (10, 10); returns that point.
+fn tray_ready(h: &mut App) -> egui::Pos2 {
+    h.state_mut().screens_mut().tray.clear();
+    h.run_steps(3);
+    let p = h.state().screens().tray.cell_center(10, 10).unwrap();
+    h.hover_at(p);
+    h.step();
+    p
+}
+
+fn button(pos: egui::Pos2, pressed: bool) -> egui::Event {
+    egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: Modifiers::NONE,
+    }
+}
+
+fn alive(h: &App) -> Vec<(usize, usize)> {
+    h.state().screens().tray.grid().alive_cells().collect()
+}
+
+/// Finding 2: a quick tap whose press and release arrive in the same frame (eframe batches
+/// every event since the last frame) drew nothing; a two-frame click worked.
+#[test]
+fn a_same_frame_tap_draws_and_stamps() {
+    let mut h = app_at(Route::Tray);
+    let p = tray_ready(&mut h);
+    h.input_mut()
+        .events
+        .extend([button(p, true), button(p, false)]);
+    h.step();
+    h.run_steps(2);
+    assert_eq!(alive(&h), vec![(10, 10)], "the tap draws (10, 10)");
+    // a second tap toggles it off again
+    h.input_mut()
+        .events
+        .extend([button(p, true), button(p, false)]);
+    h.step();
+    h.run_steps(2);
+    assert!(alive(&h).is_empty(), "{:?}", alive(&h));
+
+    // the Stamp tool places the stamp on a tap too
+    h.state_mut().screens_mut().tray.pick_stamp(0); // Glider
+    h.input_mut()
+        .events
+        .extend([button(p, true), button(p, false)]);
+    h.step();
+    h.run_steps(2);
+    let mut want = ap_engine::Grid::new(40, 26);
+    let glider = ap_engine::pattern::library::pattern("glider").unwrap();
+    want.place(
+        &glider,
+        10,
+        10,
+        ap_engine::Anchor::Center,
+        ap_engine::Boundary::Torus,
+    );
+    assert_eq!(alive(&h), want.alive_cells().collect::<Vec<_>>());
+}
+
+/// Finding 2: a press and a move in one frame started the stroke where the pointer ended up,
+/// not where the button went down.
+#[test]
+fn a_press_and_move_in_one_frame_starts_at_the_press() {
+    let mut h = app_at(Route::Tray);
+    let p = tray_ready(&mut h);
+    let q = h.state().screens().tray.cell_center(14, 10).unwrap();
+    h.input_mut()
+        .events
+        .extend([button(p, true), egui::Event::PointerMoved(q)]);
+    h.step();
+    h.input_mut().events.push(button(q, false));
+    h.step();
+    h.run_steps(2);
+    let cells = alive(&h);
+    assert_eq!(cells, (10..=14).map(|x| (x, 10)).collect::<Vec<_>>());
+}
+
+// ---- NAV-4 neighbourhoods (finding 3) -------------------------------------------------------
+
+/// Finding 3: the carry is a rulestring the Tray parses as Moore r1, so a von Neumann B2/S
+/// arrived as Moore B2/S without a word, and a Moore r2 `B3,10/S2,3` failed with a confusing
+/// toast. The Rule lab now says why it can't open such a rule in the Tray, and stays.
+#[test]
+fn open_in_playground_refuses_rules_the_tray_cannot_run() {
+    for (nb, name) in [
+        (Neighbourhood::VON_NEUMANN, "von Neumann"),
+        (Neighbourhood::HEXAGONAL, "Hexagonal"),
+        (Neighbourhood::MOORE2, "Moore r2"),
+    ] {
+        let mut h = app_at(Route::RuleLab);
+        let mut rule = LifeRule::LIFE;
+        rule.set_neighbourhood(nb);
+        if nb == Neighbourhood::MOORE2 {
+            rule.set_birth(10, true);
+        }
+        h.state_mut().screens_mut().rule_lab.set_rule(rule);
+        h.run_steps(3);
+        let tray_rule = *h.state().screens().tray.rule();
+        h.get_by_label("Open in Playground").click();
+        h.run_steps(4);
+        assert_eq!(h.state().route(), Route::RuleLab, "{name}: stays");
+        assert!(h.state().screens().tray.received.is_none(), "{name}");
+        assert_eq!(*h.state().screens().tray.rule(), tray_rule, "{name}");
+        let t = toasts(&h);
+        assert!(
+            t.iter()
+                .any(|s| s.starts_with("The Tray runs Moore r1 rules") && s.contains(name)),
+            "{name}: {t:?}"
+        );
+    }
+    // Moore r1 still opens
+    let mut h = app_at(Route::RuleLab);
+    h.state_mut()
+        .screens_mut()
+        .rule_lab
+        .set_rule(LifeRule::moore(&[3, 6], &[2, 3]));
+    h.run_steps(3);
+    h.get_by_label("Open in Playground").click();
+    h.run_steps(4);
+    assert_eq!(h.state().route(), Route::Tray);
+    assert_eq!(h.state().screens().tray.rule().code(), "B36/S23");
+}
+
+// ---- Tray: load_pattern keeps positions (finding 4) -----------------------------------------
+
+/// Finding 4: `rle()` → `load_pattern()` trimmed and re-centred the pattern, breaking the
+/// documented position-preserving round trip (and MCP `tray.get` → `tray.load_pattern`).
+#[test]
+fn tray_rle_round_trips_positions() {
+    use automata_playground::screens::tray::Model;
+    let glider = ap_engine::pattern::library::pattern("glider").unwrap();
+    let mut m = Model::default();
+    m.clear();
+    m.stamp(&glider, 1, 1); // a glider in the corner, (0..3, 0..3)
+    let before: Vec<_> = m.grid().alive_cells().collect();
+    let back = ap_engine::pattern::parse_any(&m.rle()).unwrap();
+    let mut other = Model::default();
+    assert!(!other.load_pattern(&back.pattern), "fits: not cropped");
+    assert_eq!(other.grid().alive_cells().collect::<Vec<_>>(), before);
+}
+
+/// Finding 4 (bridge): `tray.get` then `tray.load_pattern` with its `rle` restores the tray.
+#[test]
+fn tray_get_then_load_restores_the_tray() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    h.state_mut().screens_mut().tray.clear();
+    let glider = ap_engine::pattern::library::pattern("glider").unwrap();
+    h.state_mut().screens_mut().tray.load_pattern(&glider);
+    h.state_mut().screens_mut().tray.step_n(9); // the glider has moved off centre
+    let before = alive(&h);
+    let got = call(&mut h, &sock.path(), "tray.get", json!({})).unwrap();
+    h.state_mut().screens_mut().tray.randomize(3);
+    let r = call(
+        &mut h,
+        &sock.path(),
+        "tray.load_pattern",
+        json!({"pattern": got["rle"]}),
+    )
+    .unwrap();
+    assert_eq!(alive(&h), before, "{}", r["note"]);
+}
+
+/// Finding 4: what still crops: a Rule-lab frame (trimmed, up to 64 × 40) bigger than the
+/// tray is cut around its centre; a pattern bigger than the tray whose live cells fit is
+/// trimmed and centred.
+#[test]
+fn big_patterns_still_crop_around_their_centre() {
+    use ap_engine::Pattern;
+    use automata_playground::screens::tray::fit_to_tray;
+    let wide = Pattern::new(64, 3, (0..64).map(|x| (x, 1)));
+    let (p, cropped) = fit_to_tray(&wide);
+    assert!(cropped);
+    assert_eq!((p.width(), p.height(), p.population()), (40, 1, 40));
+    assert_eq!(p.cells().first(), Some(&(0, 0)), "cut from x = 12");
+    // 64 × 40 box with a blinker in the middle: trimmed (not cropped) and centred
+    let frame = Pattern::new(64, 40, [(31, 20), (32, 20), (33, 20)]);
+    let (p, cropped) = fit_to_tray(&frame);
+    assert!(!cropped);
+    assert_eq!((p.width(), p.height()), (3, 1));
+    // a pattern that fits keeps its box (and so its position)
+    let corner = Pattern::new(40, 26, [(0, 0), (39, 25)]);
+    assert_eq!(fit_to_tray(&corner), (corner.clone(), false));
+}
+
+// ---- Tray: speed and paste (plausible items) ------------------------------------------------
+
+/// `set_speed(NaN)` poisoned the speed (NaN.clamp is NaN) and with it the ticker.
+#[test]
+fn a_non_finite_speed_is_ignored() {
+    let mut h = app_at(Route::Tray);
+    let tray = &mut h.state_mut().screens_mut().tray;
+    for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        tray.set_speed(bad);
+        assert_eq!(tray.speed(), 10.0, "{bad}");
+    }
+    tray.set_speed(1e9);
+    assert_eq!(tray.speed(), 30.0, "finite values still clamp");
+    tray.set_speed(10.0);
+    tray.set_running(true);
+    let g0 = tray.stats().generation;
+    h.run_steps(10);
+    assert!(
+        h.state().screens().tray.stats().generation > g0,
+        "it still runs"
+    );
+}
+
+/// ⌘V-pasted text had no size cap (dropped files: 4 MB); a pattern with an absurd number of
+/// cells was armed and its preview painted every frame.
+#[test]
+fn huge_pastes_are_refused() {
+    let mut h = app_at(Route::Tray);
+    h.step();
+    // over 4 MB of text
+    let text = format!("x = 3, y = 3\n{}bo$2bo$3o!", "#C padding\n".repeat(400_000));
+    assert!(text.len() > 4 << 20);
+    h.input_mut().events.push(egui::Event::Paste(text));
+    h.step();
+    assert!(h.state().screens().tray.custom_stamp().is_none());
+    let t = toasts(&h);
+    assert!(t.iter().any(|s| s.contains("too large")), "{t:?}");
+
+    // small text, too many cells: 300 × 100 all alive
+    let rows = vec!["300o"; 100].join("$");
+    h.input_mut()
+        .events
+        .push(egui::Event::Paste(format!("x = 300, y = 100\n{rows}!")));
+    h.step();
+    assert!(h.state().screens().tray.custom_stamp().is_none());
+    let t = toasts(&h);
+    assert!(t.iter().any(|s| s.contains("30000 live cells")), "{t:?}");
+
+    // a normal paste still arms
+    h.input_mut()
+        .events
+        .push(egui::Event::Paste("x = 3, y = 3\nbo$2bo$3o!".into()));
+    h.step();
+    assert!(h.state().screens().tray.custom_stamp().is_some());
 }

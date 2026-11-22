@@ -329,7 +329,7 @@ draws the result.
 | method | |
 |---|---|
 | `rule() -> &LifeRule`, `set_rule(LifeRule)` | the rule (cells stay); cartridges / bits / name follow |
-| `load_pattern(&Pattern) -> bool` | clears the tray and places the pattern centred (wrapping); patterns larger than 40 × 26 are trimmed, then cropped around their centre (returns `true` when cropped); counters reset |
+| `load_pattern(&Pattern) -> bool` | clears the tray and places the pattern's box centred (wrapping), so a 40 × 26 pattern lands cell for cell; patterns larger than 40 × 26 are trimmed, then cropped around their centre (returns `true` when cropped); counters reset |
 | `set_running(bool)`, `running() -> bool` | Run / Pause (also the public `running` field) |
 | `step_n(u32)` | advances n generations now, running or not |
 | `clear()`, `restart()`, `randomize(seed: u64)` | Clear (rule kept), Restart (starting garden + Life), a 30 % soup from `seed` (rule kept); counters reset |
@@ -337,13 +337,15 @@ draws the result.
 | `stats() -> TrayStats` | `{ generation, population, born, died, mood_title, mood_text }` |
 | `grid() -> &Grid`, `history() -> &[usize]` | ages / trails; the sparkline's last ≤ 120 populations |
 | `set_tool(Tool)`, `current_tool()`, `pick_stamp(i)`, `arm(name, &Pattern)` | Draw / Erase / Stamp, a built-in stamp, a pattern armed as the custom stamp (TRAY-9; the Finder `odoc` hook should call `arm`) |
-| `set_speed(f32)`, `speed()`, `trails()`, `flat()`, `tilt()`, `cursor()` | look and feel (speed clamped to 1–30) |
+| `set_speed(f32)`, `speed()`, `trails()`, `flat()`, `tilt()`, `cursor()` | look and feel (speed clamped to 1–30; NaN / infinities ignored) |
 | `description()` / `Screen::describe` | "Cell tray, 40 by 26, generation N, M alive" (A11Y-4) |
 | `cell_center(x, y)`, `cell_rect(x, y)`, `cell_at(pos)` | screen geometry of the last frame drawn (through the perspective), for pointer tests |
 
 `receive(Carry)` (NAV-4) parses the rule (Moore) and, with an RLE, loads it like
 `load_pattern`; ⌘V (`Event::Paste`) and dropped `.rle` / `.cells` files arm the pattern as
-the custom stamp.
+the custom stamp (text / files over 4 MB and patterns over `MAX_STAMP_CELLS` = 10 000 live
+cells are refused with a toast). A press acts where the button went down, also when the press
+and its release (a tap) or a move arrive in the same frame.
 
 #### Rule lab (`screens::rule_lab::State`)
 
@@ -374,7 +376,8 @@ numbers, and only the newest request computes (a superseded worker stops within 
 generation). API calls, Open in Playground and Export wait for the result.
 
 `receive(Carry)` (NAV-4) parses the rule (Moore) and re-runs (a big spec in the background,
-so the frame never waits). "Open in Playground" sends
+so the frame never waits). "Open in Playground" (Moore r1 rules only: for another
+neighbourhood it says the Tray runs Moore r1 rules and stays) sends
 `Carry { rule: <code>, rle: Some(rle()) }` to the Tray. Export: Copy RLE, Copy script, Save
 `<stem>.rle`, Save `<stem>.rule` (`<stem>` from the script's name, `glider-garden`; the script
 exported is the text when it parses, else the last valid script).

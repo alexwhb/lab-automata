@@ -10,8 +10,8 @@ use ap_bench::tray::CONTAINER;
 use ap_engine::presets::{TRAY_BOUNDARY, TRAY_H, TRAY_W};
 use ap_theme as t;
 use eframe::egui::{
-    Align2, CornerRadius, EventFilter, Key, PointerButton, Rect, Sense, Stroke as EStroke,
-    StrokeKind, Ui, WidgetInfo, accesskit::Role, epaint::Shadow, pos2, vec2,
+    Align2, CornerRadius, Event, EventFilter, Key, PointerButton, Pos2, Rect, Sense,
+    Stroke as EStroke, StrokeKind, Ui, WidgetInfo, accesskit::Role, epaint::Shadow, pos2, vec2,
 };
 
 /// Chips sit 16 px from the stage's sides and 14 px from its top / bottom.
@@ -52,35 +52,37 @@ impl State {
             scene.geometry(scene_rect)
         };
         let pointer = ui.input(|i| i.pointer.interact_pos());
-        if resp.is_pointer_button_down_on() {
-            match self.stroke {
-                Stroke::Idle => {
-                    self.stroke = Stroke::Inert;
-                    if let Some((c, r)) = pointer.and_then(|p| geo.cell_at(p)) {
-                        // the keyboard cursor follows the pointer's last press
-                        self.cursor = (c, r);
-                        match self.current_tool() {
-                            Tool::Stamp => self.apply_tool(c, r),
-                            tool => {
-                                let value = tool == Tool::Draw && !self.model.grid().is_alive(c, r);
-                                self.model.set_cell(c, r, value);
-                                self.stroke = Stroke::Paint {
-                                    value,
-                                    last: (c, r),
-                                };
-                            }
-                        }
+        let down = resp.is_pointer_button_down_on();
+        // a quick tap can press and release within one frame (eframe batches the events since
+        // the last frame): egui then reports a click but never a held button
+        let tapped = !down && resp.clicked_by(PointerButton::Primary);
+        if self.stroke == Stroke::Idle && (down || tapped) {
+            // the press acts where the button went down, which a move in the same frame (or
+            // the release of a tap) has already left
+            self.stroke = Stroke::Inert;
+            if let Some((c, r)) = press_pos(ui).and_then(|p| geo.cell_at(p)) {
+                // the keyboard cursor follows the pointer's last press
+                self.cursor = (c, r);
+                match self.current_tool() {
+                    Tool::Stamp => self.apply_tool(c, r),
+                    tool => {
+                        let value = tool == Tool::Draw && !self.model.grid().is_alive(c, r);
+                        self.model.set_cell(c, r, value);
+                        self.stroke = Stroke::Paint {
+                            value,
+                            last: (c, r),
+                        };
                     }
                 }
-                Stroke::Paint { value, last } => {
-                    if let Some(cell) = pointer.and_then(|p| geo.cell_near(p))
-                        && cell != last
-                    {
-                        self.model.paint_line(last, cell, value);
-                        self.stroke = Stroke::Paint { value, last: cell };
-                    }
-                }
-                Stroke::Inert => {}
+            }
+        }
+        if down {
+            if let Stroke::Paint { value, last } = self.stroke
+                && let Some(cell) = pointer.and_then(|p| geo.cell_near(p))
+                && cell != last
+            {
+                self.model.paint_line(last, cell, value);
+                self.stroke = Stroke::Paint { value, last: cell };
             }
         } else {
             self.stroke = Stroke::Idle;
@@ -174,6 +176,27 @@ impl State {
         );
         legend(ui, stage);
     }
+}
+
+/// Where the primary button went down: this frame's press event if there is one (a press and
+/// a move, or a whole tap, can arrive in one frame), else the held press's origin, else the
+/// pointer.
+fn press_pos(ui: &Ui) -> Option<Pos2> {
+    ui.input(|i| {
+        i.events
+            .iter()
+            .find_map(|e| match e {
+                Event::PointerButton {
+                    pos,
+                    button: PointerButton::Primary,
+                    pressed: true,
+                    ..
+                } => Some(*pos),
+                _ => None,
+            })
+            .or(i.pointer.press_origin())
+            .or(i.pointer.interact_pos())
+    })
 }
 
 /// The cell-age legend pinned bottom-left: `padding: 7px 12px; gap: 14px; radius 8`, 10 px
