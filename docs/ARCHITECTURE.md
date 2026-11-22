@@ -345,6 +345,51 @@ script run on a worker thread (the old run stays on screen; API calls wait for t
 `<stem>.rle`, Save `<stem>.rule` (`<stem>` from the script's name, `glider-garden`; the script
 exported is the text when it parses, else the last valid script).
 
+#### Loom (`screens::loom::State`)
+
+| method | |
+|---|---|
+| `rule() -> u8`, `set_rule(u8)` | the rule number; setting it restarts the thread (LOOM-4) |
+| `toggle_key(p)`, `previous_rule()`, `next_rule()`, `surprise() -> u8` | a key press (flips bit `p` = `left·4 + centre·2 + right`), −1 / +1 (wrapping 0 ↔ 255), Surprise me (another rule from the screen's generator, seeded by `ctx.rng_seed()`) |
+| `start() -> WeaveStart`, `set_start(WeaveStart)`, `pick_first_row(FirstRow)` | how the thread starts (exactly that seed with `set_start`); the First row segment (Random draws a new seed per press) — all restart |
+| `restart()` | New thread (a Random start draws a new row, like the mockup's `fresh(start)`) |
+| `set_running(bool)`, `running() -> bool` | Weave / Pause (the spools turn only while weaving) |
+| `set_speed(f32)`, `speed()` | rows per second, rounded and clamped to 2–40 |
+| `step_n(u32)` | weaves n rows now (≤ 100 000 per call), running or not |
+| `row_count() -> u64` | rows since the start, the first included (the `row 0000` counter) |
+| `rows_text() -> String` | the visible rows (oldest first, ≤ 72), one line each, `█` alive / `·` empty |
+| `share_text() -> String` | what Share copies: `Rule N` then `rows_text()` |
+| `weave() -> &Weave`, `elementary() -> Elementary` | the engine thread and rule (binary, blurb, famous) |
+| `description()` / `Screen::describe` | "Woven pattern, rule 30, 121 cells wide, 47 rows woven" (A11Y-4); `describe` adds "weaving / paused at N rows/s" |
+
+The keys are AccessKit toggle buttons named like the mockup ("Pattern 110 makes a live cell",
+`key_name(rule, p)`) in the group `KEYS_LABEL`. On stages narrower than 0.7 × 860 px (phones)
+the board and head stay full size, cropped like the 390 reference, and the keys move into a
+4 × 2 grid so every key stays on screen. Space toggles Weave / Pause; `S` pauses and weaves
+one row.
+
+#### Terrarium (`screens::terrarium::State`)
+
+| method | |
+|---|---|
+| `jars() -> Vec<JarInfo>` | `JarInfo { code, name, population, liveliness, kept }` for the six jars (name = `rule_name` or "Mutant"; liveliness 0–1) |
+| `keep(i, bool)`, `is_kept(i)` | Keep / Kept for jar `i` (0-based; out of range ignored); keep order decides the carried-over slots |
+| `breed()` | "Breed brood N+1" (TERR-2): kept jars first (unchanged rules, fresh soup), the rest children of the parents; lineage entry; keeps cleared |
+| `fresh_soup()` | re-seeds every jar, same rules |
+| `set_mutation(u8)`, `mutation() -> u8` | bit flips per child, clamped to 1–4 |
+| `set_running(bool)`, `running() -> bool` | Run / Pause (jars tick every 140 ms and bob only while running) |
+| `tick_n(u32)` | ticks every jar n times now (≤ 10 000 per call) |
+| `brood() -> u32`, `lineage() -> Vec<LineageEntry>` | the `brood N` counter; the last 8 broods' parents, newest first |
+| `chosen_rule() -> String`, `keep_note() -> String` | the NAV-4 rule (first kept jar's, else jar 1's); "None kept: all six become parents" / "N kept as parents" |
+| `share_text() -> String`, `terrarium() -> &Terrarium` | what Share copies (`Jar 1 · B3/S23 · Life` per line); the engine bench |
+| `Screen::describe` | "Terrarium, brood 1, paused: B3/S23 Life (122 alive), …" |
+
+Plant in the Tray / Analyse in Rule lab send `Carry { rule: chosen_rule(), rle: None, from:
+Terrarium }` to the Tray / Rule lab. Each card is a group "Jar N" with the jar image ("Jar
+running rule B3/S23, 122 cells alive"), the code and name labels, the "Keep jar N" toggle and a
+`Meter` "Liveliness N%"; the jar reserves `JarScene::FOOTPRINT`, so the code is never under
+it. The first `enter` seeds the jars from `ctx.rng_seed()` unless the API changed them first.
+
 ## MCP
 
 `automata-mcp` (crate `ap-mcp`) follows `../chem-playground/crates/chem-mcp`: engine tools run
