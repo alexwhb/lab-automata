@@ -150,7 +150,11 @@ engine. The rustdoc is the reference (`cargo doc -p ap-bench --open`);
   `fill_poly`, `fill_circle`, `border` (CSS border), `ring`, `stroke_rrect`, `stroke_circle`,
   `line`, `text` (galley glyphs projected vertex by vertex), `blurred_rect` (box-shadow glow,
   σ = blur/2), `blurred_ellipse` (`filter: blur`, cached), then `paint(&painter)`. Helpers:
-  `layout_text` (letter-spacing), `galley_top_for_css_top`, `css_line_metrics`.
+  `layout_text` (letter-spacing), `galley_top_for_css_top`, `css_line_metrics`,
+  `css_blur_sigma(r)` (the σ Chrome / Skia actually draws a CSS blur radius with: three box
+  blurs, 16 px → 7.48, 10 px → 4.47; the tray's cell glows use it).
+  `scripts/chrome-tray-gen30.mjs` renders the Tray bundle at gen 30 with transitions finished,
+  for pixel comparisons in a settled state.
 - **Animation** (`anim.rs`): `cubic_bezier`, `ease`, `ease_in_out`, `ease_out`;
   `Transition::new(value, secs, ease)` + `set_target` / `step(dt) -> animating` / `value()`
   (the tray tilt: 0.4 s ease); `spool_angle(secs)` (2.4 s/turn); `jar_bob(secs, index)`.
@@ -194,10 +198,11 @@ fills in. The rustdoc is the reference (`cargo doc -p automata-playground --open
 
 | module | what |
 |---|---|
-| `lib.rs` | `APP_NAME`, `APP_ID` (`dev.labseries.AutomataPlayground`), `native_options()` (1440 × 900, min 390 × 600, wgpu, window persisted), `run()` |
+| `lib.rs` | `APP_NAME`, `APP_ID` (`dev.labseries.AutomataPlayground`), `native_options()` (1440 × 900, min 390 × 600, wgpu presenting at vsync, window persisted), `run()` |
+| `platform.rs` | OS glue: patterns the system opens with the app (TRAY-9). The macOS Apple Event `odoc` (Finder "Open With", the Dock, `open -a … glider.rle`) and pattern paths on the command line feed one queue (`queue_open`); the app registered with `set_receiver` (the real window, or a test harness) drains it at the start of every frame (`deliver` → `open_pattern`: `tray.open_file(path)` arms the custom stamp, goes to the Tray, logs `opened pattern <path>`; errors toast) |
 | `router.rs` | `Mode { Playground, Advanced }`; `Route { Tray, Loom, Terrarium, RuleLab, Series }` with `mode() -> Option<Mode>` (Series: none), `is_bench()`, `tab_label()`, `title()`, `document()`, `mockup()`, `board_size()`, `panel_height()` (844 / 904: the stacked column height), `shortcut_digit()`, `id()` / `from_id()` |
 | `app.rs` | `AutomataApp` (route, last bench, all screen states, toasts, outbox) and `AppOptions { start, rng_seed, autoplay, out_dir, save_dialog, launcher, load_persisted, mcp_socket }`; `AppOptions::test()` = seed 7, paused, no persistence, no dialogs, files into a fresh temp dir, a recording launcher. `frame(ui)` draws one frame (tests call it through kittest). Persists `{ route, last_bench }` in eframe storage. |
-| `ctx.rs` | `Ctx` (the per-frame screen context), `Carry` (NAV-4 payload), `NavRequest`, `Command` (Space / `S`), `Services`, `Ticker` |
+| `ctx.rs` | `Ctx` (the per-frame screen context, incl. frame pacing: `animate`, `wake_in`, `dt`), `Carry` (NAV-4 payload), `NavRequest`, `Command` (Space / `S`), `Services`, `Ticker` (`steps`, `due_in`) |
 | `launcher.rs` | `AppId { Breadbox, Chem, Bio, Automata }` (identity, switcher label, bundle id, availability, tag) and the injectable `Launcher` (`system()`: Spotlight by bundle id → `/Applications` → `../<repo>/dist/*.app`, then `open`; `recording(&[installed])` for tests; `from_fn`). Bundle ids: Breadbox `app.breadbox.Breadbox`, Chem `dev.labseries.ChemPlayground`; Bio is planned. |
 | `layout.rs` | `Column` specs (`aside`, `readout`, `main` + `flex` / `max` / `pad` / `gap` / borders / `scroll`), `resolve()` (lab-ui flex maths + `max-width`), `columns()` (lays out a page row: side by side they fill the window under the header, stacked each is `route.panel_height()` and the page scrolls), `stage()` (`.graph`), `bench()` (tab row + stage for a Playground screen) |
 | `widgets/` | the mockup's components (catalogue in `widgets/mod.rs`): `header` (NAV-1/3), `tabs::bench_tabs` (NAV-2), `Button` (`ghost` / `prim` / `.big`), `SegGroup` (`.seg` header / tool, `.mini` wells), `MiniButton`, `Toggle` (`.tog`), `Keep` (`.keep`), `Bit` / `BitRow` (Tray / Rule lab), `NbGrid`, `Cartridge`, `StampTile`, `Preset`, `lbl` / `lbl_colored`, `Card` (`series()` / `panel()`), `StatTile`, `Callout`, `verdict`, `Chip`, `CodeBlock`, `Slider`, `Plot` (`sparkline` / `series`, stable band, playhead), `CellGlyph`, `Icon` (every mockup icon from its SVG path data), `Toasts`, `counter`, `hit` (44 px targets, tiled within dense groups), `flow` (wrapping bar layout), `text` (CSS line boxes, wrapped text), `gallery` |
@@ -280,6 +285,14 @@ impl Screen for State {
 - **Time and randomness**: step the engine in `Screen::tick` (called after `enter` /
   `receive` / `command` and before the header, so every counter shows the same generation)
   with `ctx.dt()` + a `Ticker` per screen; `ctx.rng_seed()` (7 in tests); `ctx.autoplay()`.
+- **Frame pacing** (never spin): nothing repaints unless asked. While running, a screen whose
+  picture only changes on a step asks for the next frame when the step is due,
+  `ctx.wake_in(ticker.due_in(rate))` (waits ≤ 0.1 s); motion that changes every frame (a
+  transition, spools, bobbing jars) calls `ctx.animate()` each frame (display rate: vsync on
+  screen, never sooner than 1/240 s, every 0.1 s while the window is hidden). `ctx.dt()` is the
+  real time since the frame that asked for this one (≤ 0.1 s, or the wait + 20 ms), and
+  egui's `stable_dt` after an idle stretch, so kittest frames stay 0.1 s. A paused screen
+  asks for nothing (the Tray's callout pulse runs only while it runs).
 - **Keyboard**: the app handles ⌘1–⌘4 and Tab order; screens get `Command::RunPause` /
   `Command::Step`; check `ctx.text_focus()` before treating other letters as shortcuts.
 - **Layout**: `layout::columns` with the mockup's column specs (CSS `flex` + `max-width`,
@@ -463,3 +476,7 @@ app tools forward to the running app over `lab_mcp::bridge`, one connection per 
   `automata-playground --smoke <seconds>` runs the Tray for N seconds in a window (headless
   with `AUTOMATA_HEADLESS=1` or without a display), prints one line starting `SMOKE ` with at
   least `first_frame_ms=` and `frames=`, and exits 0; no persistence, no reads of the checkout.
+  It draws only the frames the app asks for (window and headless), so `frames=` is the app's
+  frame rate (Tray running: ~30 fps, the callout pulse). `check-bundle.sh` also opens
+  `glider.rle` with `open -n -a <copy>` (odoc) and expects `opened pattern` in the app's log
+  (SKIP without a window server).
