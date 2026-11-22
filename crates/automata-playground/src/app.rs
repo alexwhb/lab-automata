@@ -106,7 +106,8 @@ pub struct AutomataApp {
     toasts: Toasts,
     services: Services,
     outbox: Outbox,
-    pending_carry: Option<Carry>,
+    /// A carry-over (NAV-4) and the screen it is for, delivered at the start of the next frame.
+    pending_carry: Option<(Route, Carry)>,
     content_height: f32,
     header_height: f32,
     /// The options it was started with (the MCP bridge reads `mcp_socket`).
@@ -206,8 +207,11 @@ impl AutomataApp {
             self.entered = None;
         }
         self.route = req.route;
-        // delivered after `enter`, at the start of the next frame
-        self.pending_carry = req.carry;
+        // delivered after `enter`, at the start of the next frame; a navigation without one
+        // that comes first (the MCP bridge's, between frames) doesn't drop it
+        if let Some(carry) = req.carry {
+            self.pending_carry = Some((req.route, carry));
+        }
     }
 
     /// All screens' state.
@@ -298,6 +302,16 @@ impl AutomataApp {
             let entered = self.entered;
             let carry = self.pending_carry.take();
             let (mut ctx, screens) = self.ctx(&egui_ctx, body_h);
+            // a carry whose screen was left before it arrived still reaches that screen
+            let carry = match carry {
+                Some((target, c)) if target != route => {
+                    let other = screens.get(target);
+                    other.enter(&mut ctx);
+                    other.receive(c, &mut ctx);
+                    None
+                }
+                carry => carry.map(|(_, c)| c),
+            };
             let screen = screens.get(route);
             if entered != Some(route) {
                 screen.enter(&mut ctx);

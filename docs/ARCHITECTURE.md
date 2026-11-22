@@ -277,7 +277,8 @@ impl Screen for State {
 ```
 
 - **Navigation**: `ctx.go(route)`, `ctx.go_with(route, Carry::rule("B3/S23", Route::RuleLab).with_rle(rle))`
-  (the target's `enter` then `receive` run at the start of the next frame), `ctx.open_series(app)`.
+  (the target's `enter` then `receive` run at the start of the next frame — on the target even
+  if a navigation without a carry, e.g. the MCP bridge's, came first), `ctx.open_series(app)`.
   The header (brand, modes, app switcher) and the tab row navigate by themselves; "Playground"
   opens `ctx.last_bench()`.
 - **Toasts / clipboard / files**: `ctx.toast(text)`; `ctx.copy(text)` (also kept as
@@ -457,8 +458,12 @@ app tools forward to the running app over `lab_mcp::bridge`, one connection per 
   change shows in the same frame); `logic` (`App::logic`) queues requests while the window is
   hidden and sends `RequestPaintWhileHidden`; the bridge's waker repaints an idle app.
   Screenshots: `ViewportCommand::Screenshot`, PNG-encoded on a worker thread, after 2 settle
-  frames when navigating. Describe: the AccessKit tree caught by an egui plugin at the end of a
-  frame, flattened to `AccessNode`s, plus `summary` = the screen's `Screen::describe()`. Screen
+  frames when navigating (or when any other call changes the screen under a waiting request).
+  Describe: the AccessKit tree caught by an egui plugin at the end of a frame, flattened to
+  `AccessNode`s and kept with the screen it was captured on (only used for that screen), plus
+  `summary` = the screen's `Screen::describe()`. A screenshot / describe naming a `screen`
+  answers for it: if a parallel call navigated away it goes back (≤ `MAX_RETURNS`, then an
+  error). Requests whose client has hung up (a timeout) are dropped unapplied. Screen
   methods check their params first (bad ones change nothing: `INVALID_PARAMS` with a message
   for the model), then `prepare` the screen — `AutomataApp::enter_screen` runs its `enter` once
   so first-visit set-up (autoplay, the Terrarium's seeded soups) can't undo the change later —

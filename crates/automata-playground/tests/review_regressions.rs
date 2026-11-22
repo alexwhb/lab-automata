@@ -322,3 +322,164 @@ fn a_leading_bom_survives_a_control_change() {
         Some(".rule")
     );
 }
+
+// ---- MCP bridge (findings 5, 6, 7, 12; the NAV-4 carry vs a bridge navigation) --------------
+
+/// Finding 5: a `describe` answered in the frame that a navigation happened in reported the
+/// new screen (and its summary) with the previous screen's AccessKit nodes.
+#[test]
+fn describe_never_mixes_two_screens() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    assert_eq!(h.state().route(), Route::Tray);
+
+    let a = send(&sock.path(), 1, "describe", json!({}));
+    wait_pending(&mut h, 1);
+    h.step(); // armed: this (Tray) frame's tree is captured
+    assert_eq!(control::pending(h.state()), 1, "describe still waiting");
+
+    let b = send(&sock.path(), 2, "navigate", json!({"screen": "loom"}));
+    wait_pending(&mut h, 2);
+    h.step(); // the navigation is handled first, then the describe is considered
+    assert_eq!(read_reply(b)["result"]["screen"]["id"], "loom");
+    let t0 = Instant::now();
+    while control::pending(h.state()) > 0 {
+        assert!(
+            t0.elapsed() < Duration::from_secs(5),
+            "describe never answered"
+        );
+        h.step();
+    }
+    let r = read_reply(a);
+    let res = &r["result"];
+    let outline = res["outline"].as_str().unwrap();
+    let summary = res["summary"].as_str().unwrap();
+    assert_eq!(res["screen"]["id"], "loom");
+    assert!(summary.starts_with("Woven pattern"), "{summary}");
+    assert!(
+        outline.contains("Surprise me"),
+        "the Loom's nodes: {outline}"
+    );
+    assert!(!outline.contains("Random soup"), "not the Tray's");
+}
+
+/// Finding 6: `describe {screen: rule-lab}` and `tray.set_rule` (show defaults to true) sent
+/// in parallel: the describe answered for the Tray.
+#[test]
+fn describe_with_a_screen_answers_for_that_screen() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    let a = send(&sock.path(), 1, "describe", json!({"screen": "rule-lab"}));
+    let b = send(
+        &sock.path(),
+        2,
+        "tray.set_rule",
+        json!({"rule": "HighLife"}),
+    );
+    wait_pending(&mut h, 2);
+    let t0 = Instant::now();
+    while control::pending(h.state()) > 0 {
+        assert!(t0.elapsed() < Duration::from_secs(5), "never answered");
+        h.step();
+    }
+    assert_eq!(read_reply(b)["result"]["rule"], "B36/S23");
+    let r = read_reply(a);
+    let res = &r["result"];
+    assert_eq!(res["screen"]["id"], "rule-lab", "{}", res["summary"]);
+    assert!(res["summary"].as_str().unwrap().starts_with("Rule lab"));
+    assert!(
+        res["outline"]
+            .as_str()
+            .unwrap()
+            .contains("Open in Playground")
+    );
+}
+
+/// Finding 7: a call the client gave up on (timeout: "Try again") was still applied when the
+/// UI caught up, so the retry the error suggests applied it twice.
+#[test]
+fn abandoned_requests_are_not_applied() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    let gen0 = h.state().screens().tray.stats().generation;
+    let p = sock.path();
+    let r = thread::spawn(move || {
+        BridgeClient::connect(&p)?.call(
+            "tray.control",
+            json!({"action": "step", "n": 7}),
+            Duration::from_millis(200),
+        )
+    })
+    .join()
+    .unwrap();
+    assert!(matches!(r, Err(BridgeError::Timeout { .. })), "{r:?}");
+    thread::sleep(Duration::from_millis(50)); // the client has hung up
+    h.run_steps(3);
+    assert_eq!(h.state().screens().tray.stats().generation, gen0);
+
+    // a raw client that sends `terrarium.breed` and leaves before the frame runs
+    let raw = send(&sock.path(), 1, "terrarium.breed", json!({"show": false}));
+    wait_pending(&mut h, 1);
+    drop(raw);
+    thread::sleep(Duration::from_millis(50));
+    let brood = h.state().screens().terrarium.brood();
+    h.run_steps(2);
+    assert_eq!(h.state().screens().terrarium.brood(), brood);
+    // a client that waits is still answered
+    let r = call(
+        &mut h,
+        &sock.path(),
+        "terrarium.breed",
+        json!({"show": false}),
+    )
+    .unwrap();
+    assert_eq!(r["brood"], brood + 1);
+}
+
+/// Finding 12: `loom.set {seed, restart: true}` replaced the explicit seed by a fresh one.
+#[test]
+fn loom_seed_survives_restart() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    let r = call(
+        &mut h,
+        &sock.path(),
+        "loom.set",
+        json!({"seed": 42, "restart": true, "show": false}),
+    )
+    .unwrap();
+    assert_eq!(r["seed"], 42, "{}", r["description"]);
+    assert_eq!(r["start"], "random");
+    assert_eq!(
+        h.state().screens().loom.start(),
+        ap_engine::WeaveStart::Random(42)
+    );
+    // the same as a set_start(Random(42)) thread
+    let row = h.state().screens().loom.weave().newest().to_vec();
+    let want = ap_engine::Weave::new(30, ap_engine::WeaveStart::Random(42));
+    assert_eq!(row, want.newest());
+}
+
+/// A bridge `navigate` that lands in the frame after "Plant in the Tray" (the carry is
+/// delivered at the start of the next frame, after the bridge's requests) dropped the carry.
+#[test]
+fn a_carry_survives_a_bridge_navigation_in_the_next_frame() {
+    let sock = TempSocket::new();
+    let mut h = bridged(&sock.path());
+    h.state_mut().navigate(Route::Terrarium);
+    h.run_steps(3);
+    let chosen = h.state().screens().terrarium.chosen_rule();
+    h.get_by_label("Plant in the Tray").click();
+    h.step(); // the click: navigation to the Tray with the carry, applied after this frame
+    assert_eq!(h.state().route(), Route::Tray);
+    let a = send(&sock.path(), 1, "navigate", json!({"screen": "loom"}));
+    wait_pending(&mut h, 1);
+    h.step();
+    assert_eq!(read_reply(a)["result"]["screen"]["id"], "loom");
+    h.run_steps(2);
+    assert_eq!(h.state().route(), Route::Loom);
+    let tray = &h.state().screens().tray;
+    let got = tray.received.as_ref().expect("the Tray got the carry");
+    assert_eq!(got.rule, chosen);
+    assert_eq!(tray.rule().code(), chosen);
+}

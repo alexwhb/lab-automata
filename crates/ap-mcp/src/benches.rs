@@ -199,7 +199,7 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
                 "rule": {"type": "integer", "minimum": 0, "maximum": 255, "description": "The Wolfram rule."},
                 "start": {"type": "string", "enum": ["single", "random"], "description": "The first row."},
                 "seed": {"type": "integer", "minimum": 0, "description": "The random first row's seed (implies start: random)."},
-                "restart": {"type": "boolean", "description": "Start the thread over (New thread)."},
+                "restart": {"type": "boolean", "description": "Start the thread over (New thread; a random start draws a new row unless `seed` is given)."},
                 "speed": {"type": "number", "minimum": 2, "maximum": 40, "description": "Rows per second."},
                 "running": {"type": "boolean", "description": "Weave (true) or pause (false)."},
                 "step": {"type": "integer", "minimum": 1, "maximum": steps, "description": "Weave this many rows now."},

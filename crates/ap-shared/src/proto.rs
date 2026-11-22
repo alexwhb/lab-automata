@@ -171,7 +171,7 @@ pub struct LoomSet {
     /// The random first row's seed (implies `start: random`).
     #[serde(default)]
     pub seed: Option<u64>,
-    /// Start the thread over.
+    /// Start the thread over (a random start draws a new row, unless `seed` names it).
     #[serde(default)]
     pub restart: bool,
     /// Rows per second (2–40).

@@ -578,7 +578,19 @@ fn a_client_that_leaves_mid_screenshot_does_no_harm() {
         let mut raw = std::os::unix::net::UnixStream::connect(sock.path()).unwrap();
         raw.write_all(b"{\"id\":1,\"method\":\"screenshot\",\"params\":{\"screen\":\"loom\"}}\n")
             .unwrap();
-        h.step(); // the app takes the request…
+        // the app takes the request while the client is there (one that already left isn't
+        // applied at all)…
+        let ctx = h.ctx.clone();
+        let t0 = Instant::now();
+        while automata_playground::control::pending(h.state()) == 0 {
+            assert!(
+                t0.elapsed() < Duration::from_secs(5),
+                "request never arrived"
+            );
+            automata_playground::control::logic(h.state_mut(), &ctx);
+            thread::sleep(Duration::from_millis(2));
+        }
+        h.step();
     } // …and the client hangs up before the frame it waits for
     h.run_steps(5);
     let r = ok(&mut h, &sock.path(), "status", Value::Null);

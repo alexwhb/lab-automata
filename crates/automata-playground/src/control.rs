@@ -53,6 +53,10 @@ use std::sync::Arc;
 /// Frames to let pass after navigating before a screenshot or description is taken.
 pub const SETTLE_FRAMES: u8 = 2;
 
+/// How often a screenshot / describe of a named screen goes back to it after other calls
+/// (made in parallel) moved the app elsewhere, before it gives up with an error.
+pub const MAX_RETURNS: u8 = 3;
+
 /// Bridge state owned by the app.
 #[derive(Default)]
 pub struct Control {
@@ -73,6 +77,12 @@ struct Waiting {
     kind: Kind,
     /// Frames still to let pass before acting.
     settle: u8,
+    /// The screen the request named (`screen` param), which it must answer for.
+    want: Option<Route>,
+    /// Times it went back to `want` after another call navigated away.
+    returns: u8,
+    /// The screen when it last looked: a change (any call's navigation) settles it again.
+    seen: Route,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -175,6 +185,12 @@ fn install_waker(server: &BridgeServer, installed: &mut bool, ctx: &Context) {
 }
 
 fn handle(app: &mut AutomataApp, ctx: &Context, req: PendingRequest) {
+    if req.is_abandoned() {
+        // the client gave up (a timeout) and hung up before the UI got here: applying the
+        // call now would change the app behind its back (and twice after a retry)
+        log::info!("bridge: skipped `{}`, its client left", req.method());
+        return;
+    }
     match req.method() {
         proto::STATUS => {
             let reply = to_value(&status(app, ctx));
@@ -198,19 +214,26 @@ fn handle(app: &mut AutomataApp, ctx: &Context, req: PendingRequest) {
             } else {
                 Kind::Describe
             };
-            let settle = match screen_param(&req) {
+            let (settle, want) = match screen_param(&req) {
                 Ok(Some(route)) if route != app.route() => {
                     app.navigate(route);
-                    SETTLE_FRAMES
+                    (SETTLE_FRAMES, Some(route))
                 }
-                Ok(_) => 0,
+                Ok(want) => (0, want),
                 Err(e) => return req.reply(Err(e)),
             };
             if kind == Kind::Describe {
                 ctx.enable_accesskit();
                 ctx.add_plugin(AccessCapture::default()); // ignored if already added
             }
-            app.control.waiting.push(Waiting { req, kind, settle });
+            app.control.waiting.push(Waiting {
+                req,
+                kind,
+                settle,
+                want,
+                returns: 0,
+                seen: app.route(),
+            });
         }
         method if ap::METHODS.contains(&method) => {
             let reply = screen_method(app, ctx, &req);
@@ -223,18 +246,51 @@ fn handle(app: &mut AutomataApp, ctx: &Context, req: PendingRequest) {
     }
 }
 
+/// Answers the screenshots and descriptions whose frame has come, oldest first.
+///
+/// A request that named a screen answers for that screen: if another call (made in parallel)
+/// navigated away meanwhile, it goes back and settles again (at most [`MAX_RETURNS`] times,
+/// then an error). Only the oldest such request navigates; later ones that name another screen
+/// wait their turn. Any change of screen under a waiting request lets [`SETTLE_FRAMES`] pass
+/// again, and a description uses AccessKit nodes captured on the screen it reports.
 fn advance_waiting(app: &mut AutomataApp, ctx: &Context) {
-    let route = app.route();
-    let screen = screen_ref(route);
-    let summary = app.screens().get_ref(route).describe();
     let captured = ctx
         .with_plugin::<AccessCapture, _>(|p| p.captured.take())
         .flatten();
     let mut still_waiting = Vec::new();
     let mut want_capture = false;
+    // the screen the oldest request that named one is answering for
+    let mut claimed: Option<Route> = None;
     for mut w in std::mem::take(&mut app.control.waiting) {
         if w.req.is_abandoned() {
             continue; // the client left; nobody wants the answer
+        }
+        if let Some(want) = w.want {
+            if claimed.is_some_and(|c| c != want) {
+                still_waiting.push(w); // after the request before it
+                continue;
+            }
+            claimed = Some(want);
+            if app.route() != want {
+                if w.returns >= MAX_RETURNS {
+                    w.req.reply(Err(RemoteError::new(
+                        code::INTERNAL_ERROR,
+                        format!(
+                            "other calls kept switching the app away from `{}`; try again",
+                            want.id()
+                        ),
+                    )));
+                    continue;
+                }
+                w.returns += 1;
+                app.navigate(want);
+            }
+        }
+        // the screen changed since this request last looked (its own return, or another
+        // call's navigation): the new screen's first frames aren't laid out yet
+        if app.route() != w.seen {
+            w.seen = app.route();
+            w.settle = SETTLE_FRAMES;
         }
         if w.settle > 0 {
             w.settle -= 1;
@@ -242,24 +298,27 @@ fn advance_waiting(app: &mut AutomataApp, ctx: &Context) {
             still_waiting.push(w);
             continue;
         }
+        let route = app.route();
         match w.kind {
-            Kind::Screenshot => request_screenshot(ctx, w.req, screen.clone()),
+            Kind::Screenshot => request_screenshot(ctx, w.req, screen_ref(route)),
             Kind::Describe => match &captured {
-                Some(nodes) => {
+                // nodes captured on another screen (a navigation came in between) don't count
+                Some((at, nodes)) if *at == route => {
                     let d = Description {
-                        screen: screen.clone(),
+                        screen: screen_ref(route),
                         outline: AccessNode::outline(nodes),
                         nodes: nodes.clone(),
                     };
+                    let summary = app.screens().get_ref(route).describe();
                     let reply = to_value(&d).map(|mut v| {
                         if let Value::Object(m) = &mut v {
-                            m.insert("summary".into(), Value::String(summary.clone()));
+                            m.insert("summary".into(), Value::String(summary));
                         }
                         v
                     });
                     w.req.reply(reply);
                 }
-                None => {
+                _ => {
                     want_capture = true;
                     still_waiting.push(w);
                 }
@@ -268,8 +327,10 @@ fn advance_waiting(app: &mut AutomataApp, ctx: &Context) {
     }
     app.control.waiting = still_waiting;
     if want_capture {
-        // Capture at the end of this frame (or the next, if AccessKit just came on).
-        ctx.with_plugin::<AccessCapture, _>(|p| p.armed = true);
+        // Capture at the end of this frame (or the next, if AccessKit just came on), noting
+        // the screen it shows.
+        let route = app.route();
+        ctx.with_plugin::<AccessCapture, _>(|p| p.armed = Some(route));
     }
 }
 
@@ -511,7 +572,8 @@ fn screen_method(
                 (Some(ap::FirstRow::Random), None) => l.pick_first_row(loom::FirstRow::Random),
                 (None, None) => {}
             }
-            if p.restart {
+            // `set_start` already restarted from the seed; `restart` would draw a new row
+            if p.restart && p.seed.is_none() {
                 l.restart();
             }
             if let Some(s) = speed {
@@ -753,11 +815,12 @@ fn lab_state(l: &rule_lab::State, samples: usize, note: Option<String>) -> ap::L
 
 // ---- AccessKit ------------------------------------------------------------------------------
 
-/// Catches the AccessKit tree egui produces at the end of a frame, when armed.
+/// Catches the AccessKit tree egui produces at the end of a frame, when armed, with the
+/// screen it was armed on (the frame's).
 #[derive(Default)]
 struct AccessCapture {
-    armed: bool,
-    captured: Option<Vec<AccessNode>>,
+    armed: Option<Route>,
+    captured: Option<(Route, Vec<AccessNode>)>,
 }
 
 impl egui::Plugin for AccessCapture {
@@ -766,12 +829,12 @@ impl egui::Plugin for AccessCapture {
     }
 
     fn output_hook(&mut self, _ctx: &Context, output: &mut egui::FullOutput) {
-        if !self.armed {
+        let Some(route) = self.armed else {
             return;
-        }
+        };
         if let Some(update) = &output.platform_output.accesskit_update {
-            self.captured = Some(outline_nodes(update));
-            self.armed = false;
+            self.captured = Some((route, outline_nodes(update)));
+            self.armed = None;
         }
     }
 }
