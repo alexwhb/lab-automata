@@ -450,13 +450,18 @@ app tools forward to the running app over `lab_mcp::bridge`, one connection per 
   `input` (`pattern_input`: stamp id / name, RLE or plaintext; `rule_input`: rulestring or
   name; `stamp`, `named_rule`) so the app and the server accept the same text.
 - **Engine tools**: `run_life`, `analyze_rule`, `elementary`, `parse_rule`, `parse_pattern`,
-  `list_presets`, `rule_script` (limits: `run_life` ≤ 256 × 256, ≤ 10 000 gens, ≤ 2·10⁸
+  `list_presets`, `rule_script` (limits: `run_life` ≤ 256 × 256 — a declared box too big for
+  the grid counts by its live cells' bounding box, as in the Tray — ≤ 10 000 gens, ≤ 2·10⁸
   cell-generations; `analyze_rule` the engine's 256 / 2000; `elementary` ≤ 65 536 cells).
 - **App tools**: `app_status`, `list_screens` (offline, plus `current`), `navigate`,
   `screenshot`, `describe_screen`, and per screen `tray_get` / `tray_set_rule` /
   `tray_load_pattern` / `tray_control`, `loom_get` / `loom_set`, `terrarium_get` /
   `terrarium_keep` / `terrarium_breed`, `lab_get` / `lab_set_script` / `lab_scrub`, which
   forward their arguments unchanged as the params of `tray.get` … `lab.scrub`.
+  Every app tool's string `maxLength`s fit one bridge request line (`lab_mcp::bridge::
+  MAX_REQUEST_BYTES`, 1 MiB, at 6 bytes per JSON-escaped character: `tray_load_pattern`'s
+  pattern is ≤ `TRAY_PATTERN_MAX_LEN` = 170 000); `AppLink::call` refuses bigger arguments with
+  a clear message before sending.
 - **App side** (`control.rs`): `poll` runs first thing in `AutomataApp::frame` (a navigation or
   change shows in the same frame); `logic` (`App::logic`) queues requests while the window is
   hidden and sends `RequestPaintWhileHidden`; the bridge's waker repaints an idle app.

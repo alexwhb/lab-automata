@@ -639,7 +639,17 @@ pub fn run_life(args: &RunLifeArgs, cancelled: &dyn Fn() -> bool) -> Result<Life
         (None, None) => (LifeRule::LIFE.with_neighbourhood(nb), "default"),
     };
     let boundary = boundary(args.boundary.as_deref())?;
-    let pat = &input.file.pattern;
+    // like the Tray: a declared box too big for the grid counts by its live cells' bounding
+    // box (`x = 300, y = 1` around one cell is a 1×1 pattern); one that fits keeps its margins
+    let declared = &input.file.pattern;
+    let fits = |n: usize, given: Option<usize>| n <= given.unwrap_or(RUN_MAX_DIM).min(RUN_MAX_DIM);
+    let trimmed;
+    let pat = if fits(declared.width(), args.width) && fits(declared.height(), args.height) {
+        declared
+    } else {
+        trimmed = declared.trimmed();
+        &trimmed
+    };
     let (pw, ph) = (pat.width(), pat.height());
     if pw > RUN_MAX_DIM || ph > RUN_MAX_DIM {
         return Err(ToolError::new(format!(

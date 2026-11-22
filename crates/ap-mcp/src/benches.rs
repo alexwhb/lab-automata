@@ -56,6 +56,12 @@ fn object(properties: Value, required: &[&str]) -> Value {
 
 const PATTERN_DESC: &str = "RLE (`x = 3, y = 3` then `bo$2bo$3o!`), plaintext rows of `.` and \
 `O`, or a stamp id: glider, lwss, pulsar, penta, rpent, acorn, gun, rep.";
+
+/// `tray_load_pattern`'s longest pattern, in characters. The app's bridge reads at most
+/// [`lab_mcp::bridge::MAX_REQUEST_BYTES`] (1 MiB) per request line and JSON writes a character
+/// as up to 6 bytes (`\u0001`), so this many always fit with the other arguments (the Tray is
+/// 40 × 26: a bigger pattern is cropped anyway).
+pub const TRAY_PATTERN_MAX_LEN: usize = 170_000;
 const SAMPLES_DESC: &str = "Points in the population series (2–2001, default 41).";
 
 /// Registers the Tray, Loom, Terrarium and Rule-lab tools.
@@ -108,8 +114,9 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
         &link,
         Tool::new(
             "tray_load_pattern",
-            "Clear the Tray and place a pattern centred on it (wrapping; patterns larger than \
-             40 × 26 are cropped around their centre). The counters start over at gen 0 and \
+            "Clear the Tray and place a pattern centred on it (wrapping; a 40 × 26 pattern, \
+             like tray_get's `rle`, lands cell for cell; larger ones are trimmed to their live \
+             cells, then cropped around their centre). The counters start over at gen 0 and \
              the run state stays. A `rule =` in the RLE header is applied too, unless you give \
              `rule`. Returns the Tray afterwards (`note` says what was loaded / cropped).",
         )
@@ -117,7 +124,7 @@ pub fn register(tools: &mut ToolRegistry, link: AppLink) -> Result<(), RegistryE
         .idempotent()
         .input_schema(object(
             json!({
-                "pattern": {"type": "string", "description": PATTERN_DESC, "maxLength": 1_000_000},
+                "pattern": {"type": "string", "description": PATTERN_DESC, "maxLength": TRAY_PATTERN_MAX_LEN},
                 "rule": {"type": "string", "description": "Also set this rule (default: the pattern's `rule =`, else keep the Tray's).",
                          "maxLength": 1000},
                 "show": crate::show_schema("Tray")

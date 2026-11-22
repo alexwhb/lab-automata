@@ -90,6 +90,17 @@ impl AppLink {
                 ap_shared::SOCKET_ENV
             )));
         };
+        // the app reads one request line of at most 1 MiB: say so rather than have it cut off
+        let line = serde_json::json!({"id": u64::MAX, "method": method, "params": &params})
+            .to_string()
+            .len()
+            + 1;
+        if line > lab_mcp::bridge::MAX_REQUEST_BYTES {
+            return Err(LinkError::Refused(format!(
+                "the arguments are {line} bytes as JSON, and Automata Playground reads at most \
+                 1 MiB per call; send a smaller pattern or script"
+            )));
+        }
         let result = BridgeClient::connect(path).and_then(|mut c| c.call(method, params, timeout));
         let value = result.map_err(|e| link_error(e, method))?;
         serde_json::from_value(value).map_err(|e| {
