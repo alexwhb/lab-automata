@@ -1,6 +1,8 @@
 //! `automata-playground --smoke <seconds> [--headless]` — a measurable start-up + run path for
 //! `scripts/test-all.sh` and `scripts/check-bundle.sh`: the real [`AutomataApp`] opens on the
-//! Tray with autoplay on, draws every frame for `<seconds>` of wall time and prints one line
+//! Tray with autoplay on, draws the frames it asks for during `<seconds>` of wall time (it
+//! paces itself like the real app — a frame per generation or per pulse step, vsync while
+//! visible — so `frames=` is its real frame count, not a spin) and prints one line
 //!
 //! ```text
 //! SMOKE route=tray mode=window first_frame_ms=412 frames=180 gens=30 frame_ms_avg=1.9 frame_ms_max=7.2 status=ok
@@ -8,7 +10,8 @@
 //!
 //! then exits 0 (1 on an error or when the window closes early, 2 on bad arguments). With
 //! `--headless` or `AUTOMATA_HEADLESS=1` — or when no window can be opened — the same app draws
-//! into an egui context without a window (layout + tessellation at ~60 Hz, no GPU).
+//! into an egui context without a window (layout + tessellation, paced by the repaint delay the
+//! app asks for, no GPU).
 //!
 //! A smoke run never touches the user's state: no persistence (a temp storage folder), no
 //! save dialogs, a launcher that opens nothing, a fixed seed. It reads nothing from the
@@ -159,6 +162,16 @@ impl Driver {
         }
     }
 
+    /// Wall time left until the run is due to end (from now).
+    fn until_end(&self) -> Duration {
+        let end = match self.first {
+            Some(first) => first + Duration::from_secs_f64(self.seconds),
+            None => self.deadline,
+        };
+        end.saturating_duration_since(Instant::now())
+            .max(Duration::from_millis(1))
+    }
+
     /// After the app drew a frame that took `dt`.
     fn after(&mut self, app: &AutomataApp, dt: Duration) {
         if self.done {
@@ -228,7 +241,8 @@ impl eframe::App for SmokeApp {
             }
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         } else {
-            ui.ctx().request_repaint_after(Duration::from_millis(16));
+            // the app asks for its own frames; this only makes sure the run ends on time
+            ui.ctx().request_repaint_after(self.driver.until_end());
         }
     }
 
@@ -273,15 +287,14 @@ pub fn run_windowed(args: &SmokeArgs) -> Option<SmokeReport> {
     }))
 }
 
-/// Runs without a window: the app draws into an egui context at ~60 Hz (layout and
-/// tessellation on the CPU).
+/// Runs without a window: the app draws into an egui context (layout and tessellation on the
+/// CPU), sleeping between frames for the repaint delay the app asks for.
 pub fn run_headless(args: &SmokeArgs) -> SmokeReport {
     crate::STARTED.get_or_init(Instant::now);
     let ctx = egui::Context::default();
     ap_theme::install(&ctx);
     let mut app = AutomataApp::with_options(app_options());
     let mut d = Driver::new(args, "headless");
-    let frame = Duration::from_millis(16);
     let t_start = Instant::now();
     while !d.done {
         let t0 = Instant::now();
@@ -298,9 +311,15 @@ pub fn run_headless(args: &SmokeArgs) -> SmokeReport {
         out.textures_delta.clear();
         let dt = t0.elapsed();
         d.after(&app, dt);
-        if let Some(rest) = frame.checked_sub(dt) {
-            std::thread::sleep(rest);
-        }
+        // what the app asked for (`Duration::MAX` when idle), at least one 60 Hz frame
+        let asked = out
+            .viewport_output
+            .get(&egui::ViewportId::ROOT)
+            .map_or(Duration::MAX, |v| v.repaint_delay);
+        let wait = asked
+            .max(Duration::from_millis(16).saturating_sub(dt))
+            .min(d.until_end());
+        std::thread::sleep(wait);
     }
     d.report
 }
@@ -348,8 +367,8 @@ mod tests {
         }
     }
 
-    /// A short headless run draws frames, the Tray runs and advances, and the line has the
-    /// fields the scripts parse.
+    /// A short headless run draws the frames the app asks for, the Tray runs and advances, and
+    /// the line has the fields the scripts parse.
     #[test]
     fn headless_smoke_runs_the_tray() {
         let r = run_headless(&SmokeArgs {
@@ -358,6 +377,8 @@ mod tests {
         });
         assert!(r.ok(), "{}", r.line());
         assert!(r.frames > 5, "{}", r.line());
+        // paced like the app: ~30 frames a second (the callout's pulse), not 60 or a spin
+        assert!(r.frames <= 16, "{}", r.line());
         assert!(r.gens > 0, "{}", r.line());
         let line = r.line();
         assert!(

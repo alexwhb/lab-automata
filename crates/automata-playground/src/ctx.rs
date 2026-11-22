@@ -227,30 +227,28 @@ impl<'a> Ctx<'a> {
 
     /// Ask for the next frame at display rate, for motion that changes every frame (a tilt
     /// transition, spinning spools, bobbing jars): call it every frame while it moves. Vsync
-    /// paces those frames while the window is visible; while it is hidden (occluded or
-    /// minimised) eframe doesn't paint, so nothing would wait for vsync and the app would
-    /// spin a core: then frames come every [`HIDDEN_FRAME`] seconds instead.
+    /// paces those frames while the window is on screen. Nothing does when it isn't: eframe
+    /// doesn't paint a window it knows is hidden (occluded or minimised), and macOS doesn't
+    /// hold back a window that opened where it isn't composited (another Space, behind a
+    /// full-screen app) without reporting it occluded. So frames are never asked for less than
+    /// [`MIN_FRAME`] apart (at most 240 a second, above any Mac display's refresh, so vsync
+    /// still sets the pace on screen), and every [`HIDDEN_FRAME`] while known to be hidden.
     ///
     /// A simulation that only changes when its next step is due uses [`Ctx::wake_in`].
     pub fn animate(&self) {
         let hidden = self.egui.input(|i| i.viewport().visible() == Some(false));
-        if hidden {
-            self.wake_in(HIDDEN_FRAME);
-        } else {
-            self.egui.request_repaint();
-            self.asked(0.0);
-        }
+        self.wake_in(if hidden { HIDDEN_FRAME } else { MIN_FRAME });
     }
 
     /// Ask for the next frame in `secs` seconds (when a running simulation's next step is
     /// due: `ctx.wake_in(ticker.due_in(speed))`) and draw nothing until then unless input
-    /// arrives. Waits are capped at [`MAX_WAIT`], so a running screen still draws a few
-    /// frames a second and [`Ctx::dt`] keeps its time.
+    /// arrives. Waits are kept between [`MIN_FRAME`] and [`MAX_WAIT`], so a running screen
+    /// still draws a few frames a second and [`Ctx::dt`] keeps its time.
     pub fn wake_in(&self, secs: f32) {
         let wait = if secs.is_nan() {
             MAX_WAIT
         } else {
-            secs.clamp(0.0, MAX_WAIT)
+            secs.clamp(MIN_FRAME, MAX_WAIT)
         };
         self.egui.request_repaint_after_secs(wait);
         self.asked(wait);
@@ -288,6 +286,9 @@ pub const MAX_DT: f32 = 0.1;
 /// The longest wait [`Ctx::wake_in`] asks for (s): a running screen draws at least 10 frames
 /// a second.
 pub const MAX_WAIT: f32 = 0.1;
+/// The shortest frame interval [`Ctx::animate`] and [`Ctx::wake_in`] ask for (s): 240 frames
+/// a second, faster than any Mac display refreshes, for when vsync doesn't pace the window.
+pub const MIN_FRAME: f32 = 1.0 / 240.0;
 /// How late a frame asked for with [`Ctx::wake_in`] may come and still keep its time (s):
 /// event-loop latency and a vsync interval.
 pub const SLACK: f32 = 0.02;
@@ -460,14 +461,13 @@ mod tests {
         });
         assert!(close(dt, 0.1 + SLACK), "{dt}");
 
-        // animate: an immediate repaint; dt capped at MAX_DT
-        assert_eq!(
-            pass(&egui, 3.05, false, |c| {
-                dt = c.dt();
-                c.animate();
-            }),
-            std::time::Duration::ZERO
-        );
+        // animate: a repaint at display rate (never asked for sooner than MIN_FRAME); dt
+        // capped at MAX_DT
+        let delay = pass(&egui, 3.05, false, |c| {
+            dt = c.dt();
+            c.animate();
+        });
+        assert!(close(ms(delay), MIN_FRAME * 1e3), "{delay:?}");
         assert!(close(dt, 0.05));
         pass(&egui, 3.5, false, |c| dt = c.dt());
         assert!(close(dt, MAX_DT));
