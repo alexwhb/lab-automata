@@ -200,12 +200,24 @@ impl<'a> StatTile<'a> {
 pub struct Callout<'a> {
     title: &'a str,
     text: &'a str,
+    pulse: bool,
 }
 
 impl<'a> Callout<'a> {
-    /// A callout.
+    /// A callout (its dot pulsing).
     pub fn new(title: &'a str, text: &'a str) -> Self {
-        Self { title, text }
+        Self {
+            title,
+            text,
+            pulse: true,
+        }
+    }
+
+    /// Whether the dot pulses: the pulse repaints the window at ~30 fps, so a screen with
+    /// nothing else moving (a paused Tray) turns it off and the dot holds full opacity.
+    pub fn pulse(mut self, pulse: bool) -> Self {
+        self.pulse = pulse;
+        self
     }
 
     /// Draws it full width (requests ~30 fps repaints for the pulse while visible).
@@ -239,10 +251,14 @@ impl<'a> Callout<'a> {
             Stroke::new(1.0, t::EDGE),
             StrokeKind::Inside,
         );
-        let time = ui.input(|i| i.time);
-        let phase = ((time / 1.6).fract() * std::f64::consts::TAU) as f32;
-        // ease-in-out between .55 and 1 (peak mid-cycle)
-        let opacity = 0.55 + 0.45 * (0.5 - 0.5 * phase.cos());
+        let opacity = if self.pulse {
+            let time = ui.input(|i| i.time);
+            let phase = ((time / 1.6).fract() * std::f64::consts::TAU) as f32;
+            // ease-in-out between .55 and 1 (peak mid-cycle)
+            0.55 + 0.45 * (0.5 - 0.5 * phase.cos())
+        } else {
+            1.0
+        };
         let x = rect.left() + 15.0;
         let ty = rect.top() + 13.0;
         let cy = ty + tg.size().y / 2.0;
@@ -268,8 +284,10 @@ impl<'a> Callout<'a> {
             Sense::hover(),
         );
         xr.widget_info(|| WidgetInfo::labeled(Role::Label, true, &text));
-        ui.ctx()
-            .request_repaint_after(std::time::Duration::from_millis(33));
+        if self.pulse {
+            ui.ctx()
+                .request_repaint_after(std::time::Duration::from_millis(33));
+        }
         let resp = child.response();
         ui.advance_cursor_after_rect(rect);
         resp

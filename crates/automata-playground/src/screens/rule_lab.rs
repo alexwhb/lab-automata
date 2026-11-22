@@ -270,10 +270,12 @@ impl Screen for State {
             ctx.animate();
         }
         if self.playing {
-            for _ in 0..self.ticker.steps(ctx.dt(), 1000.0 / PLAY_MS) {
+            let rate = 1000.0 / PLAY_MS;
+            for _ in 0..self.ticker.steps(ctx.dt(), rate) {
                 self.lab.advance();
             }
-            ctx.animate();
+            // the next frame when the playhead's next generation is due
+            ctx.wake_in(self.ticker.due_in(rate));
         }
         layout::columns(ui, ctx, &COLUMNS, |ui, _ctx, i| match i {
             0 => self.spec_aside(ui),

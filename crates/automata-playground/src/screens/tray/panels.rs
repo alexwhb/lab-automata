@@ -199,7 +199,10 @@ impl State {
         });
 
         // ---- What is happening
-        Callout::new(stats.mood_title, stats.mood_text).show(ui);
+        // the dot pulses while the tray runs (a paused Tray draws nothing until input)
+        Callout::new(stats.mood_title, stats.mood_text)
+            .pulse(self.running)
+            .show(ui);
     }
 }
 

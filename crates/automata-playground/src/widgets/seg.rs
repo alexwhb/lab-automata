@@ -391,7 +391,8 @@ fn paint_centered_rows(
 
 /// A lone `.mini` button (no well): the Rule lab's neighbourhood presets ("Moore r1", "von
 /// Neumann", …), text left-aligned, `.mini-on` when selected; `width` fixes its width
-/// (labels then wrap like the mockup's "von Neumann").
+/// (labels then wrap like the mockup's "von Neumann"). Always 28 px tall, as CSS's
+/// `height: 28px`: a wrapped label overflows it, centred, instead of growing the button.
 #[must_use = "call .show(ui)"]
 pub struct MiniButton<'a> {
     label: &'a str,
@@ -434,7 +435,7 @@ impl<'a> MiniButton<'a> {
         let natural = galley(ui, self.label, font.clone(), fg).size().x + 20.0;
         let w = self.width.unwrap_or(natural);
         let g = wrapped(ui, self.label, font, fg, (w - 20.0).max(1.0), None);
-        let size = vec2(w, t::size::MINI.max(g.size().y));
+        let size = vec2(w, t::size::MINI);
         let (id, rect) = ui.allocate_space(size);
         let resp = interact(
             ui,
@@ -462,5 +463,44 @@ impl<'a> MiniButton<'a> {
         painter.galley_with_override_text_color(pos2(rect.left() + 10.0, ty), g, fg);
         focus_ring_if(ui, &resp, rect, CornerRadius::same(t::radius::MINI));
         resp
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use eframe::egui;
+
+    /// CSS `.mini { height: 28px }`: a label that wraps ("von Neumann" in 84 px) overflows the
+    /// button instead of growing it, so a row of presets stays aligned.
+    #[test]
+    fn mini_buttons_stay_28_px_tall_when_their_label_wraps() {
+        let ctx = egui::Context::default();
+        ap_theme::install(&ctx);
+        let mut heights = Vec::new();
+        let mut wraps = false;
+        for _ in 0..2 {
+            heights.clear();
+            let mut out = ctx.run_ui(egui::RawInput::default(), |ui| {
+                for (label, width) in [("Moore r1", None), ("von Neumann", Some(84.0))] {
+                    let r = ui.scope(|ui| {
+                        let b = MiniButton::new(label, label == "Moore r1");
+                        match width {
+                            Some(w) => b.width(w).show(ui),
+                            None => b.show(ui),
+                        }
+                    });
+                    heights.push(r.response.rect.height());
+                }
+                let font = lab_theme::font::medium(12.0);
+                wraps = wrapped(ui, "von Neumann", font, t::TEXT, 64.0, None)
+                    .rows
+                    .len()
+                    > 1;
+            });
+            out.textures_delta.clear();
+        }
+        assert!(wraps, "the label wraps at 84 px");
+        assert_eq!(heights, vec![t::size::MINI; 2]);
     }
 }
