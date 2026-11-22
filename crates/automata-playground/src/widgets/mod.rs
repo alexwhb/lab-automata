@@ -39,6 +39,7 @@ pub mod gallery;
 pub mod glyph;
 pub mod header;
 pub mod icons;
+pub mod menu;
 pub mod plot;
 pub mod seg;
 pub mod slider;
