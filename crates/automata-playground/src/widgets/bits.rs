@@ -41,7 +41,7 @@ impl<'a> Bit<'a> {
     /// The drawn size.
     pub fn size(&self, ui: &Ui) -> eframe::egui::Vec2 {
         if self.lab {
-            let w = galley(ui, &self.n.to_string(), self.font(), t::TEXT)
+            let w = galley(ui, self.n.to_string(), self.font(), t::TEXT)
                 .size()
                 .x
                 + 10.0;
@@ -90,7 +90,7 @@ impl<'a> Bit<'a> {
             Stroke::new(1.0, border),
             StrokeKind::Inside,
         );
-        let g = galley(ui, &self.n.to_string(), self.font(), fg);
+        let g = galley(ui, self.n.to_string(), self.font(), fg);
         painter.galley(
             pos2(
                 rect.center().x - g.size().x / 2.0,
@@ -172,6 +172,7 @@ impl<'a> BitRow<'a> {
                 .accessibility_role(Role::Group)
                 .accessibility_label(self.prefix),
         );
+        super::set_bounds(&group, used);
         let mut clicked = None;
         for (n, b) in bits.into_iter().enumerate() {
             let id = group.scope_id().with(n);
@@ -229,6 +230,7 @@ impl NbGrid {
                 .accessibility_role(Role::Group)
                 .accessibility_label("Neighbourhood cells"),
         );
+        super::set_bounds(&group, used);
         let mut clicked = None;
         for i in 0..25usize {
             let (x, y) = ((i % 5) as i32 - 2, (i / 5) as i32 - 2);

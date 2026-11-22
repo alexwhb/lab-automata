@@ -99,7 +99,8 @@ impl Gallery {
         lab_ui::paint::paint_grid(ui.painter(), full, full.min, &t::PAPER);
         let cols = [
             Column::aside("Buttons", 360.0).flex(1.0, 1.0, 360.0),
-            Column::aside("Lists", 300.0).flex(1.0, 1.0, 300.0),
+            // the Tray aside's content width (248 − 2 · 12)
+            Column::aside("Lists", 256.0),
             Column::aside("Readouts", 360.0).flex(1.0, 1.0, 360.0),
             Column::aside("Icons", 300.0).flex(1.0, 1.0, 300.0),
         ];
@@ -240,7 +241,7 @@ impl Gallery {
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 4.0;
                 let _ = MiniButton::new("Moore r1", true).show(ui);
-                let _ = MiniButton::new("von Neumann", false).width(70.0).show(ui);
+                let _ = MiniButton::new("von Neumann", false).width(84.0).show(ui);
             });
         });
     }

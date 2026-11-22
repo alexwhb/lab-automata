@@ -4,7 +4,7 @@
 //! analysis aside, 904 px panels), header actions, keyboard hooks. Wave 2 replaces the body.
 
 use super::Screen;
-use crate::ctx::{Command, Ctx};
+use crate::ctx::{Carry, Command, Ctx};
 use crate::layout::{self, Column};
 use crate::widgets::ghost;
 use eframe::egui::Ui;
@@ -23,6 +23,8 @@ pub const COLUMNS: [Column; 3] = [
 pub struct State {
     /// Play / Pause of the scrubber.
     pub playing: bool,
+    /// The last rule carried here (NAV-4).
+    pub received: Option<Carry>,
 }
 
 impl Screen for State {
@@ -33,6 +35,15 @@ impl Screen for State {
         if ghost("Export").show(ui).clicked() {
             ctx.toast("Export arrives with the Rule lab");
         }
+    }
+
+    fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {
+        ctx.toast(format!(
+            "Rule lab got {} from {}",
+            carry.rule,
+            carry.from.title()
+        ));
+        self.received = Some(carry);
     }
 
     fn command(&mut self, cmd: Command, _ctx: &mut Ctx) -> bool {

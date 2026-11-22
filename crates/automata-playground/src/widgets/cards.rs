@@ -109,6 +109,7 @@ impl Card {
                 );
                 let r = inner(&mut child);
                 let used = child.min_rect();
+                super::set_bounds(&child, used);
                 lab_ui::paint::advance_block(ui, used);
                 InnerResponse::new(r.inner, r.response)
             }
@@ -228,6 +229,7 @@ impl<'a> Callout<'a> {
                 .accessibility_role(Role::Group)
                 .accessibility_label("What is happening"),
         );
+        super::set_bounds(&child, rect);
         let painter = child.painter();
         painter.rect(
             rect,

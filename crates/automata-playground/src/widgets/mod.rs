@@ -112,6 +112,20 @@ pub mod hit {
     }
 }
 
+/// Gives a container node (a `Ui` built with an accessibility role: groups, regions, the tab
+/// list) its bounds; egui only sets bounds on widgets, and assistive tech (and tests) need
+/// them on landmarks too.
+pub fn set_bounds(ui: &Ui, rect: Rect) {
+    let r = eframe::egui::accesskit::Rect {
+        x0: rect.min.x as f64,
+        y0: rect.min.y as f64,
+        x1: rect.max.x as f64,
+        y1: rect.max.y as f64,
+    };
+    ui.ctx()
+        .accesskit_node_builder(ui.unique_id(), |b| b.set_bounds(r));
+}
+
 /// Click sense when enabled, hover only when disabled.
 pub(crate) fn sense(enabled: bool) -> Sense {
     if enabled {

@@ -261,6 +261,7 @@ impl<'a> SegGroup<'a> {
                 .accessibility_role(role)
                 .accessibility_label(self.label),
         );
+        super::set_bounds(&group, well);
         group.painter().rect(
             well,
             CornerRadius::same(self.style.well_radius()),

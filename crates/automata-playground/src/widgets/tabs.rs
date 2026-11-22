@@ -121,6 +121,7 @@ pub fn bench_tabs(ui: &mut Ui, ctx: &mut Ctx, slot: impl FnOnce(&mut RowSlot, &m
             .accessibility_role(Role::TabList)
             .accessibility_label("Benches"),
     );
+    super::set_bounds(&nav, tabs_rect);
     let mut x = tabs_rect.left();
     for (i, r) in Route::BENCHES.into_iter().enumerate() {
         let tr = Rect::from_min_size(pos2(x, tabs_rect.top()), vec2(tab_ws[i], t::size::TAB_ROW));

@@ -158,10 +158,9 @@ impl State {
             let used = self.identity_card(ctx, &mut sec, rect, app);
             bottom = bottom.max(used.bottom());
         }
-        advance_block(
-            ui,
-            Rect::from_min_max(origin, pos2(origin.x + width, bottom)),
-        );
+        let used = Rect::from_min_max(origin, pos2(origin.x + width, bottom));
+        crate::widgets::set_bounds(&sec, used);
+        advance_block(ui, used);
     }
 
     /// One identity card at `rect.min`, `rect.width()` wide; returns the rect used.
@@ -192,6 +191,7 @@ impl State {
                 ramp(ui, &id);
             });
         let used = inner.response.rect;
+        crate::widgets::set_bounds(&card, used);
         if highlighted {
             // a soft halo in the app's accent around the ring
             let halo = Shadow {
@@ -475,6 +475,7 @@ fn lower_card(ui: &mut Ui, i: usize, rect: Rect) -> (f32, Rect) {
             let left = ui.min_rect().left();
             ui.expand_to_include_rect(Rect::from_min_size(pos2(left, top), vec2(1.0, min_inner)));
         });
+    crate::widgets::set_bounds(&card, r.response.rect);
     (natural, r.response.rect)
 }
 

@@ -102,6 +102,7 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
             .max_rect(bar)
             .accessibility_role(Role::Banner),
     );
+    super::set_bounds(&bar_ui, bar);
 
     // ---- brand (a link home: the Tray)
     let brand = at(0);
@@ -123,11 +124,21 @@ pub fn header(ui: &mut Ui, ctx: &mut Ctx, actions: impl FnOnce(&mut Ui, &mut Ctx
     x += word.size().x + 10.0;
     p.galley(pos2(x, text_top(cy, &slash)), slash.clone(), t::SLASH);
     x += slash.size().x + 10.0;
+    let doc_rect = Rect::from_min_size(pos2(x, cy - doc.size().y / 2.0), doc.size());
     p.galley(pos2(x, text_top(cy, &doc)), doc, t::TEXT_DIM);
     focus_ring_if(&bar_ui, &resp, brand, CornerRadius::same(6));
     if resp.clicked() {
         ctx.go(Route::Tray);
     }
+    // the document name, as text for assistive tech (NAV-1)
+    let document = route.document();
+    bar_ui
+        .interact(
+            doc_rect,
+            bar_ui.scope_id().with("document"),
+            eframe::egui::Sense::hover(),
+        )
+        .widget_info(|| eframe::egui::WidgetInfo::labeled(Role::Label, true, document));
 
     // ---- mode switcher
     let mut mode_ui = bar_ui.new_child(UiBuilder::new().id_salt("modes").max_rect(at(1)));
@@ -199,6 +210,7 @@ fn app_switcher(ui: &mut Ui, rect: Rect) -> Option<AppId> {
             .accessibility_role(Role::Group)
             .accessibility_label("Switch app"),
     );
+    super::set_bounds(&group, rect);
     group.painter().rect(
         rect,
         CornerRadius::same(t::radius::WELL),

@@ -185,22 +185,108 @@ engine. The rustdoc is the reference (`cargo doc -p ap-bench --open`);
 
 ## The app (`automata-playground`)
 
-- `router.rs`: `Mode { Playground, Advanced }`, `Route { Tray, Loom, Terrarium, RuleLab,
-  Series }` with `mode()`, tab label, document name, mockup file, board size.
-- `app.rs`: `AutomataApp` (route, per-screen state, toasts, clipboard / save hooks),
-  `AppOptions { start, rng_seed, autoplay, out_dir, mcp_socket }` (`AppOptions::test()` is
-  deterministic: fixed seed, paused, files into a temp dir).
-- `widgets/`: the mockup's components — header (brand, mode switcher, app switcher, actions),
-  bench tab row, `.ghost` / `.prim` / `.seg` / `.mini` / `.tog` / `.keep` buttons, `.bit`,
-  `.cart`, `.stamp`, `.lbl`, `.card`, stat tile, callout, chip, slider, sparkline / population
-  plot, icons (the mockup's SVG paths drawn as egui shapes), toasts.
-- `screens/`: `tray.rs`, `loom.rs`, `terrarium.rs`, `rule_lab.rs`, `series.rs`, each with a
-  `State` and `fn ui(&mut State, &mut Ctx, &mut egui::Ui)`.
-- Time: each screen advances from `ctx.input(|i| i.stable_dt)` accumulated against its speed,
-  and requests repaints while running; tests drive it with `harness.step()` or call the state's
-  `step()` directly.
-- `control.rs`: answers lab-mcp bridge requests each frame (status, navigate, screenshot,
-  describe + Automata methods).
+The shell (wave 1) owns everything here except the four bench screens' files, which wave 2
+fills in. The rustdoc is the reference (`cargo doc -p automata-playground --open`).
+
+| module | what |
+|---|---|
+| `lib.rs` | `APP_NAME`, `APP_ID` (`dev.labseries.AutomataPlayground`), `native_options()` (1440 × 900, min 390 × 600, wgpu, window persisted), `run()` |
+| `router.rs` | `Mode { Playground, Advanced }`; `Route { Tray, Loom, Terrarium, RuleLab, Series }` with `mode() -> Option<Mode>` (Series: none), `is_bench()`, `tab_label()`, `title()`, `document()`, `mockup()`, `board_size()`, `panel_height()` (844 / 904: the stacked column height), `shortcut_digit()`, `id()` / `from_id()` |
+| `app.rs` | `AutomataApp` (route, last bench, all screen states, toasts, outbox) and `AppOptions { start, rng_seed, autoplay, out_dir, save_dialog, launcher, load_persisted, mcp_socket }`; `AppOptions::test()` = seed 7, paused, no persistence, no dialogs, files into a fresh temp dir, a recording launcher. `frame(ui)` draws one frame (tests call it through kittest). Persists `{ route, last_bench }` in eframe storage. |
+| `ctx.rs` | `Ctx` (the per-frame screen context), `Carry` (NAV-4 payload), `NavRequest`, `Command` (Space / `S`), `Services`, `Ticker` |
+| `launcher.rs` | `AppId { Breadbox, Chem, Bio, Automata }` (identity, switcher label, bundle id, availability, tag) and the injectable `Launcher` (`system()`: Spotlight by bundle id → `/Applications` → `../<repo>/dist/*.app`, then `open`; `recording(&[installed])` for tests; `from_fn`). Bundle ids: Breadbox `app.breadbox.Breadbox`, Chem `dev.labseries.ChemPlayground`; Bio is planned. |
+| `layout.rs` | `Column` specs (`aside`, `readout`, `main` + `flex` / `max` / `pad` / `gap` / borders / `scroll`), `resolve()` (lab-ui flex maths + `max-width`), `columns()` (lays out a page row: side by side they fill the window under the header, stacked each is `route.panel_height()` and the page scrolls), `stage()` (`.graph`), `bench()` (tab row + stage for a Playground screen) |
+| `widgets/` | the mockup's components (catalogue in `widgets/mod.rs`): `header` (NAV-1/3), `tabs::bench_tabs` (NAV-2), `Button` (`ghost` / `prim` / `.big`), `SegGroup` (`.seg` header / tool, `.mini` wells), `MiniButton`, `Toggle` (`.tog`), `Keep` (`.keep`), `Bit` / `BitRow` (Tray / Rule lab), `NbGrid`, `Cartridge`, `StampTile`, `Preset`, `lbl` / `lbl_colored`, `Card` (`series()` / `panel()`), `StatTile`, `Callout`, `verdict`, `Chip`, `CodeBlock`, `Slider`, `Plot` (`sparkline` / `series`, stable band, playhead), `CellGlyph`, `Icon` (every mockup icon from its SVG path data), `Toasts`, `counter`, `hit` (44 px targets, tiled within dense groups), `flow` (wrapping bar layout), `text` (CSS line boxes, wrapped text), `gallery` |
+| `control.rs` (MCP wave, not yet) | answers lab-mcp bridge requests each frame (status, navigate, screenshot, describe + Automata methods); `AppOptions::mcp_socket` is the hook, `Screen::describe` the text |
+| `screens/` | `Screen` trait, `Screens` (all states, kept alive across navigation); `series.rs` (complete); `tray.rs`, `loom.rs`, `terrarium.rs`, `rule_lab.rs` (placeholders: page frame, header / tab-row actions, keyboard hooks — wave 2 replaces them) |
+
+### How a screen plugs in
+
+A screen is a `pub struct State` (with `Default`) in `src/screens/<name>.rs` that implements
+`screens::Screen`. The app owns it (`Screens::<name>`), so it survives navigation; only the
+active screen is drawn and ticked.
+
+```rust
+use super::Screen;
+use crate::ctx::{Carry, Command, Ctx, Ticker};
+use crate::layout::{self, Column};
+use crate::widgets::tabs::RowSlot;
+use crate::widgets::{Icon, SegGroup, SegItem, SegStyle, counter, ghost, prim};
+
+pub const COLUMNS: [Column; 3] = [
+    Column::aside("Cartridges and stamps", 248.0).pad(14.0, 12.0).border_right(),
+    Column::main("Bench"),
+    Column::readout("Rule and readouts").gap(18.0),
+];
+
+#[derive(Default)]
+pub struct State { running: bool, speed: f32, ticker: Ticker, started: bool /* + engine state */ }
+
+impl Screen for State {
+    // first frame on this route (and every return to it)
+    fn enter(&mut self, ctx: &mut Ctx) {
+        if !self.started { self.started = true; self.running = ctx.autoplay(); /* seed from ctx.rng_seed() */ }
+    }
+    // the header's right slot: left to right, 8 px gaps, wraps at 390; make items 32 px tall
+    fn header_actions(&mut self, ctx: &mut Ctx, ui: &mut egui::Ui) {
+        let run = if self.running { prim("Pause").icon(Icon::Pause) } else { prim("Run").icon(Icon::Play) };
+        if run.show(ui).clicked() { self.running = !self.running; }
+        counter(ui, &format!("gen {:04}", 0));
+        if ghost("Share").show(ui).clicked() { ctx.copy("x = …"); ctx.toast("Copied the tray as RLE"); }
+    }
+    // the bench tab row's right side: one `slot.add` per flex item (or `slot.hint("…")`)
+    fn tab_actions(&mut self, _ctx: &mut Ctx, slot: &mut RowSlot) {
+        slot.add(|ui| SegGroup::new("Tool", &TOOLS, Some(0)).style(SegStyle::Tool).show(ui));
+        slot.add(|ui| ghost("Random soup").icon(Icon::Dice).height(30.0).show(ui));
+    }
+    // Space (nothing focused) → RunPause; S (no text field focused) → Step
+    fn command(&mut self, cmd: Command, _ctx: &mut Ctx) -> bool {
+        match cmd { Command::RunPause => self.running = !self.running, Command::Step => { /* step */ } }
+        true
+    }
+    // NAV-4: a rule (+ RLE) handed over by another screen, after `enter`
+    fn receive(&mut self, carry: Carry, ctx: &mut Ctx) { /* parse carry.rule / carry.rle */ ctx.toast("…"); }
+    // the body under the header
+    fn ui(&mut self, ctx: &mut Ctx, ui: &mut egui::Ui) {
+        if self.running {
+            for _ in 0..self.ticker.steps(ctx.dt(), self.speed) { /* engine step */ }
+            ctx.animate();
+        }
+        layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
+            0 => { /* rules aside: ui is top-down, padded, `gap` spacing, scrolls */ }
+            1 => layout::bench(ui, ctx, self, |s, ctx, stage| { /* draw on the .graph stage */ }),
+            _ => { /* readouts */ }
+        });
+    }
+    fn describe(&self) -> String { "Cell tray, 40 by 26, generation 30, 90 alive".into() } // A11Y-4, MCP
+}
+```
+
+- **Navigation**: `ctx.go(route)`, `ctx.go_with(route, Carry::rule("B3/S23", Route::RuleLab).with_rle(rle))`
+  (the target's `enter` then `receive` run at the start of the next frame), `ctx.open_series(app)`.
+  The header (brand, modes, app switcher) and the tab row navigate by themselves; "Playground"
+  opens `ctx.last_bench()`.
+- **Toasts / clipboard / files**: `ctx.toast(text)`; `ctx.copy(text)` (also kept as
+  `AutomataApp::last_copied()` for tests); `ctx.save_text("glider-garden.rle", &rle)` → native
+  save dialog in the app, `out_dir` in tests (`AutomataApp::saved_files()`), `Ok(None)` when
+  cancelled.
+- **Time and randomness**: `ctx.dt()` (`stable_dt`, ≤ 0.1 s) + a `Ticker` per screen;
+  `ctx.animate()` while running; `ctx.rng_seed()` (7 in tests); `ctx.autoplay()`.
+- **Keyboard**: the app handles ⌘1–⌘4 and Tab order; screens get `Command::RunPause` /
+  `Command::Step`; check `ctx.text_focus()` before treating other letters as shortcuts.
+- **Layout**: `layout::columns` with the mockup's column specs (CSS `flex` + `max-width`,
+  border-box) — at 1440 they fill the window height under the header, at 390 they stack at
+  `route.panel_height()` and the page scrolls (heights match the 390 references: Tray 2759,
+  Loom 1915, Terrarium 1875, Rule lab 2899). Benches put `layout::bench` in their main
+  column; the Rule lab uses `Column::main(..).pad(16.0, 16.0).gap(14.0).scroll(true)`.
+- **Accessibility**: use the widgets (they set roles, names, pressed / disabled, focus ring,
+  44 px targets); give canvases a `describe()` and an AccessKit label; group regions with
+  `UiBuilder::accessibility_role` and call `widgets::set_bounds(&ui, rect)` on them.
+- **Tests**: `tests/common/mod.rs` builds the real app (`app().at(Route::Tray).phone().build()`),
+  clicks by label / role (scrolling targets into view), reads `pressed` / `selected` /
+  `disabled`, presses keys (`press`, `press_cmd`), steps (`step_until`), reads `toasts`, and
+  renders (`render`, `render_full`, `screenshot`). `scripts/compare-mockup.sh` writes
+  `[app | mockup]` PNGs to `target/compare/`.
 
 ## MCP
 

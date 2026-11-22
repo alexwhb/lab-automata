@@ -166,14 +166,37 @@ pub fn get<'a>(h: &'a App, label: &'a str, role: Role) -> Node<'a> {
     h.get_by_role_and_label(role, label)
 }
 
-/// Clicks the single node labelled `label` (any role) and settles.
+/// The window's rect.
+pub fn viewport(h: &App) -> egui::Rect {
+    h.ctx.content_rect()
+}
+
+/// Scrolls the page until the node labelled `label` (with `role`, if given) is fully in the
+/// window (the page scrolls when the columns stack at 390 px).
+pub fn reveal(h: &mut App, label: &str, role: Option<Role>) {
+    for _ in 0..4 {
+        let node = match role {
+            Some(r) => h.get_by_role_and_label(r, label),
+            None => h.get_by_label(label),
+        };
+        if viewport(h).contains_rect(node.rect()) {
+            return;
+        }
+        node.scroll_to_me();
+        settle(h);
+    }
+}
+
+/// Clicks the single node labelled `label` (any role), scrolling it into view first.
 pub fn click(h: &mut App, label: &str) {
+    reveal(h, label, None);
     h.get_by_label(label).click();
     settle(h);
 }
 
-/// Clicks the node labelled `label` with `role` and settles.
+/// Clicks the node labelled `label` with `role` (scrolled into view) and settles.
 pub fn click_role(h: &mut App, label: &str, role: Role) {
+    reveal(h, label, Some(role));
     get(h, label, role).click();
     settle(h);
 }
@@ -258,6 +281,20 @@ pub fn child_labels(h: &App, parent: &str, parent_role: Role, role: Role) -> Vec
         .filter(|n| n.accesskit_node().role() == role)
         .map(|n| n.accesskit_node().label().unwrap_or_default())
         .collect()
+}
+
+/// Controls the mockup packs 2–4 px apart (bit rows, the 5 × 5 neighbourhood, the 32 px app
+/// switcher squares, the wrapping Rule-lab family well): their targets grow to 44 px across
+/// the open side and tile the group along the packed side, so they may be narrower than 44
+/// (A11Y-3 "where padding allows") — but never under 28 (the Rule lab bits' 29 px pitch).
+pub fn dense(label: &str) -> bool {
+    label.starts_with("Born with ")
+        || label.starts_with("Survives with ")
+        || label.starts_with("Neighbour ")
+        || automata_playground::AppId::ALL
+            .iter()
+            .any(|a| a.switcher_label() == label)
+        || ["Life-like", "Generations", "Larger than Life", "Lenia"].contains(&label)
 }
 
 // --------------------------------------------------------------------------------------------

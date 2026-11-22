@@ -240,6 +240,7 @@ pub fn columns(
                     .accessibility_label(c.label),
             );
             col.set_clip_rect(rect.intersect(ui.clip_rect()));
+            crate::widgets::set_bounds(&col, rect);
             paint_column(&col, rect, c);
             let inner = Rect::from_min_max(
                 pos2(

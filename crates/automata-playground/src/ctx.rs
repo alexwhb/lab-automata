@@ -239,7 +239,9 @@ impl Ticker {
         }
         self.acc += dt.max(0.0);
         let period = 1.0 / rate;
-        let n = (self.acc / period).floor();
+        // a hair of tolerance so 0.05 + 0.05 s at 10 /s is one step despite float error
+        let n = (self.acc / period + 1e-4).floor();
+        self.acc = self.acc.max(n * period);
         self.acc -= n * period;
         if n > Self::MAX_STEPS as f32 {
             self.acc = 0.0;

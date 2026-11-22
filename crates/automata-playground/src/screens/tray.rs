@@ -6,7 +6,7 @@
 //! the real tray on `ap-engine` + `ap-bench`.
 
 use super::Screen;
-use crate::ctx::{Command, Ctx};
+use crate::ctx::{Carry, Command, Ctx};
 use crate::layout::{self, Column};
 use crate::widgets::tabs::RowSlot;
 use crate::widgets::{Icon, SegGroup, SegItem, SegStyle, counter, ghost, prim};
@@ -37,6 +37,8 @@ pub struct State {
     pub generation: u64,
     /// Selected tool (index into [`TOOLS`]).
     pub tool: usize,
+    /// The last rule / pattern carried here (NAV-4).
+    pub received: Option<Carry>,
     started: bool,
 }
 
@@ -88,6 +90,15 @@ impl Screen for State {
         });
         slot.add(|ui| ghost("Random soup").icon(Icon::Dice).height(30.0).show(ui));
         slot.add(|ui| ghost("Clear").height(30.0).show(ui));
+    }
+
+    fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {
+        ctx.toast(format!(
+            "Tray got {} from {}",
+            carry.rule,
+            carry.from.title()
+        ));
+        self.received = Some(carry);
     }
 
     fn command(&mut self, cmd: Command, _ctx: &mut Ctx) -> bool {

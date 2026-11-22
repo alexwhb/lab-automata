@@ -390,3 +390,55 @@ impl eframe::App for AutomataApp {
         egui::Color32::to_normalized_gamma_f32(ap_theme::PAPER.base)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_options_are_deterministic() {
+        let (a, b) = (AppOptions::test(), AppOptions::test());
+        assert_eq!(a.rng_seed, AppOptions::TEST_SEED);
+        assert!(!a.autoplay && !a.save_dialog && !a.load_persisted);
+        assert_ne!(a.out_dir, b.out_dir, "each test app gets its own folder");
+        assert_eq!(AppOptions::at(Route::Loom).start, Route::Loom);
+        assert!(AppOptions::default().autoplay);
+    }
+
+    #[test]
+    fn save_and_copy_go_through_the_outbox() {
+        let mut app = AutomataApp::with_options(AppOptions::test());
+        let egui_ctx = egui::Context::default();
+        let path = {
+            let (mut c, _) = app.ctx(&egui_ctx, 600.0);
+            c.copy("x = 1, y = 1\no!");
+            c.toast("Copied");
+            c.save_text("glider.rle", "x = 3, y = 3\nbo$2bo$3o!")
+                .expect("write")
+                .expect("not cancelled")
+        };
+        assert_eq!(app.last_copied(), Some("x = 1, y = 1\no!"));
+        assert_eq!(app.saved_files(), std::slice::from_ref(&path));
+        assert!(path.starts_with(&app.services().out_dir));
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            "x = 3, y = 3\nbo$2bo$3o!"
+        );
+        assert_eq!(app.toasts().items().len(), 1);
+        let _ = std::fs::remove_dir_all(&app.services().out_dir);
+    }
+
+    #[test]
+    fn navigation_rules() {
+        let mut app = AutomataApp::with_options(AppOptions::at(Route::RuleLab));
+        assert_eq!(app.last_bench(), Route::Tray, "Tray at first start");
+        app.navigate(Route::Terrarium);
+        app.navigate(Route::RuleLab);
+        assert_eq!(app.last_bench(), Route::Terrarium);
+        app.open_series(AppId::Chem);
+        assert_eq!(app.route(), Route::Series);
+        assert_eq!(app.screens().series.highlight, Some(AppId::Chem));
+        app.navigate(Route::Series);
+        assert_eq!(app.screens().series.highlight, None);
+    }
+}
