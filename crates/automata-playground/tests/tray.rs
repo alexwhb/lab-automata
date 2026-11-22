@@ -113,6 +113,7 @@ fn clicking_a_cell_through_the_perspective_toggles_exactly_it() {
     for (x, y) in [(0, 0), (39, 0), (20, 13), (0, 25), (39, 25), (7, 19)] {
         click_cell(&mut h, x, y);
         assert_eq!(alive(&h), [(x, y)], "pressing ({x}, {y})");
+        assert_eq!(tray(&h).cursor(), (x, y), "the keyboard cursor follows");
         assert_eq!(tray(&h).cell_visual(x, y), CellVisual::Live(1), "a newborn");
         click_cell(&mut h, x, y);
         assert!(alive(&h).is_empty(), "pressing ({x}, {y}) again");

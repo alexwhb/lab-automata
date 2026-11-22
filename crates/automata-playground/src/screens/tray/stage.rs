@@ -57,6 +57,8 @@ impl State {
                 Stroke::Idle => {
                     self.stroke = Stroke::Inert;
                     if let Some((c, r)) = pointer.and_then(|p| geo.cell_at(p)) {
+                        // the keyboard cursor follows the pointer's last press
+                        self.cursor = (c, r);
                         match self.current_tool() {
                             Tool::Stamp => self.apply_tool(c, r),
                             tool => {

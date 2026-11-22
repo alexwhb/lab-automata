@@ -157,7 +157,6 @@ pub struct State {
     cursor: (usize, usize),
     stroke: Stroke,
     soups: u64,
-    seed: u64,
     ticker: Ticker,
     started: bool,
     geometry: Option<TrayGeometry>,
@@ -185,7 +184,6 @@ impl Default for State {
             cursor: (TRAY_W / 2, TRAY_H / 2),
             stroke: Stroke::Idle,
             soups: 0,
-            seed: 0,
             ticker: Ticker::default(),
             started: false,
             geometry: None,
@@ -545,7 +543,6 @@ impl Screen for State {
     fn enter(&mut self, ctx: &mut Ctx) {
         if !self.started {
             self.started = true;
-            self.seed = ctx.rng_seed();
             self.set_running(ctx.autoplay());
         }
     }
