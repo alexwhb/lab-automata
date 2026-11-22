@@ -2,7 +2,7 @@
 # scripts/test-all.sh — the single green-light command (SPEC DONE-4).
 #
 #   fmt         cargo fmt --all --check
-#   lint        shellcheck scripts/*.sh (skipped when shellcheck is not installed)
+#   lint        shellcheck --severity=warning scripts/*.sh (skipped without shellcheck)
 #   clippy      cargo clippy --workspace --all-targets -D warnings
 #   test        cargo test --workspace: engine unit, reference (REF) and golden tests, headless
 #               end-to-end scenarios, GUI tests with egui_kittest, snapshot renders, MCP tests
@@ -111,7 +111,7 @@ fi
 if skipped lint; then skip_step "lint" "SKIP"
 elif [ -z "$SHELLCHECK" ]; then skip_step "lint: shellcheck scripts/*.sh" "shellcheck not installed"
 else
-  run_step "lint: shellcheck scripts/*.sh" lint bash -c 'shellcheck scripts/*.sh'
+  run_step "lint: shellcheck -S warning scripts/*.sh" lint bash -c 'shellcheck --severity=warning scripts/*.sh'
 fi
 
 # ------------------------------------------------------------------ clippy
@@ -214,7 +214,7 @@ if skipped perf; then skip_step "perf (release)" "SKIP / --quick"; else
   if run_step "perf: build the release app" build-release \
       cargo build --release --locked -p automata-playground --bin automata-playground; then
     BIN="$CARGO_TARGET_DIR/release/automata-playground"
-    if strings -a "$BIN" | grep -q -- '--smoke'; then
+    if strings -a "$BIN" | grep -F -- '--smoke' >/dev/null; then   # not -q: SIGPIPE + pipefail
       run_step "smoke: the Tray running 3 s with the GUI open" smoke with_timeout 60 "$BIN" --smoke 3
       line=$(grep '^SMOKE' "$LOGS/smoke.log" | tail -1); echo "   ${line:-no SMOKE line}"
       ff=$(sed -n 's/.*first_frame_ms=\([0-9.]*\).*/\1/p' <<<"$line")

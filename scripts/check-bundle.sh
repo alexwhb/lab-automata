@@ -174,7 +174,8 @@ done
 
 # ------------------------------------------------------------------ smoke runs
 section "Smoke runs (sandboxed: the lab-series folder denied, the bundle read-only)"
-if ! strings -a "$bin" | grep -q -- '--smoke'; then
+# (grep without -q reads all of strings' output: with pipefail, -q's early exit is a SIGPIPE)
+if ! strings -a "$bin" | grep -F -- '--smoke' >/dev/null; then
   skip "the app has no --smoke mode yet (see PROGRESS.md Requests); launch checks skipped"
 else
   lab_series="$(dirname "$repo")"

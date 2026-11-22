@@ -24,7 +24,7 @@
 #     build-info.json          version, build number, commit, build date
 #
 # Bundle builds get their own target dir ($CARGO_TARGET_DIR/bundle-macos, default
-# target/bundle-macos): their RUSTFLAGS differ from everyday release builds.
+# target/bundle-macos): their rustflags differ from everyday release builds.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 repo="$(pwd -P)"
@@ -71,7 +71,17 @@ export AUTOMATA_BUNDLE=1
 # rustc applies the last matching prefix: the checkout, then the lab-series folder (labkit),
 # then anything else under $HOME (cargo registry, rustup toolchain).
 lab_series="$(dirname "$repo")"
-export RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$HOME=~ --remap-path-prefix=$lab_series=/lab-series --remap-path-prefix=$repo=/automata-playground"
+# CARGO_ENCODED_RUSTFLAGS (0x1f-separated) keeps paths with spaces intact; it replaces RUSTFLAGS,
+# so any RUSTFLAGS from the environment are carried over word by word.
+sep=$'\x1f'
+flags="--remap-path-prefix=$HOME=~${sep}--remap-path-prefix=$lab_series=/lab-series${sep}--remap-path-prefix=$repo=/automata-playground"
+extra="${CARGO_ENCODED_RUSTFLAGS:-}"
+if [ -z "$extra" ] && [ -n "${RUSTFLAGS:-}" ]; then
+  read -r -a words <<<"$RUSTFLAGS"
+  extra=$(IFS="$sep"; echo "${words[*]}")
+fi
+export CARGO_ENCODED_RUSTFLAGS="${extra:+$extra$sep}$flags"
+unset RUSTFLAGS
 build_args=(-p automata-playground --bin automata-playground)
 [ -n "$mcp_pkg" ] && build_args+=(-p "$mcp_pkg" --bin automata-mcp)
 CARGO_TARGET_DIR="$target_dir" cargo build --release --locked "${build_args[@]}"
