@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Automata Playground — Rule lab</title>
+<script src="fc6a79d5-a218-4d2c-a5e1-9ef6e66531a2"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+.well{background-color:#060606;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:12px 12px}
+a{color:#4CC3F0}a:hover{color:#8AD8F5}
+.lbl{font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.mini{border:0;background:transparent;color:#A3A3A3;font:500 12px Inter,system-ui,sans-serif;padding:0 10px;height:28px;border-radius:5px;cursor:pointer}
+.mini:hover{color:#EAEAEA}
+.mini-on{background:#2A2A2A;color:#F5F5F5}
+.mini-off{color:#5E5E5E;cursor:default}
+.mini-off:hover{color:#5E5E5E}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.ghost:hover{background:#1F1F1F}
+.prim{border:1px solid #6B2A5C;background:#22101D;color:#F9B3E8;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.prim:hover{background:#2E1427}
+.sw{width:32px;height:32px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.card{border:1px solid #242424;border-radius:10px;background:#111111;padding:14px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box}
+.bit{min-width:26px;height:26px;border:1px solid #2E2E2E;border-radius:5px;background:#141414;color:#A3A3A3;font:500 11.5px 'JetBrains Mono',monospace;cursor:pointer;padding:0 4px}
+.bit:hover{border-color:#6B2A5C;color:#EAEAEA}
+.bit-on{background:#F06BD0;border-color:#F06BD0;color:#1A0A16}
+.nb{width:30px;height:30px;border:1px solid #2E2E2E;border-radius:5px;background:#141414;cursor:pointer;padding:0}
+.nb:hover{border-color:#6B2A5C}
+.nb-on{background:#6B2A5C;border-color:#F06BD0}
+.nb-me{background:#F06BD0;border-color:#F06BD0;cursor:default}
+.code{font:400 12px/1.65 'JetBrains Mono',monospace;color:#D9D9D9;white-space:pre;margin:0;overflow-x:auto}
+input[type=range]{accent-color:#F06BD0;width:100%;margin:0;height:28px}
+</style>
+</helmet>
+<div class="paper" style="min-height: 960px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.8); flex-wrap: wrap">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#F06BD0" stroke-width="1.5"></rect><rect x="11" y="5.5" width="4" height="4" rx="1" fill="#4CC3F0"></rect><rect x="16.5" y="11" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="5.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="11" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="16.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Automata Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">glider-garden.rule</span>
+    </div>
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px; margin-left: 12px">
+      <a class="seg" href="Main.dc.html">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M7 1.5 12.5 4.5 7 7.5 1.5 4.5z"></path><path d="M1.5 4.5v5L7 12.5l5.5-3v-5"></path><path d="M7 7.5v5"></path></svg>
+        Playground
+      </a>
+      <a class="seg seg-on" href="Advanced.dc.html" aria-current="page">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 3.5h10M2 7h6M2 10.5h8"></path><path d="M10.5 6l1.5 1-1.5 1"></path></svg>
+        Advanced
+      </a>
+    </nav>
+    <div role="group" aria-label="Switch app" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="sw" href="Identity.dc.html" aria-label="Breadbox circuit app"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3.5" fill="none" stroke="#F2A33A" stroke-width="1.3"></rect><circle cx="5" cy="5.5" r="1.1" fill="#F2A33A"></circle><circle cx="11" cy="5.5" r="1.1" fill="#F2A33A"></circle><path d="M5 5.5C5 11 11 8 11 11" fill="none" stroke="#F2A33A" stroke-width="1.2" stroke-linecap="round"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Chem Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#86A2FF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.8h4M6.6 1.8v4L2.8 12.6a1.1 1.1 0 0 0 1 1.6h8.4a1.1 1.1 0 0 0 1-1.6L9.4 5.8v-4"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Bio Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#4BE3A0" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 2c0 4 7 6 7 12M11.5 2c0 4-7 6-7 12"></path></svg></a>
+      <a class="sw sw-on" href="Main.dc.html" aria-label="Automata Playground (current)"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="6.5" y="2" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="6.5" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="2" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="6.5" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect></svg></a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button class="ghost">Open in Playground</button>
+      <button class="ghost">Export</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <aside aria-label="Rule spec" style="flex: 0 0 300px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 16px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; height: 904px; overflow: auto">
+      <span class="lbl">Rule spec</span>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; color: #D9D9D9">Family</span>
+        <div role="group" aria-label="Rule family" style="display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; background: #060606; border: 1px solid #242424; border-radius: 7px">
+          <button class="mini mini-on" aria-pressed="true">Life-like</button>
+          <button class="mini mini-off" aria-disabled="true">Generations</button>
+          <button class="mini mini-off" aria-disabled="true">Larger than Life</button>
+          <button class="mini mini-off" aria-disabled="true">Lenia</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 12px; color: #D9D9D9">Neighbourhood</span><span style="font: 400 11px 'JetBrains Mono', monospace; color: #A3A3A3">{{nbCount}} cells</span></div>
+        <div style="display: flex; gap: 14px; align-items: flex-start">
+          <div role="group" aria-label="Neighbourhood cells" style="display: grid; grid-template-columns: repeat(5, 30px); gap: 3px">
+            <sc-for list="{{nbCells}}" as="c" hint-placeholder-count="25">
+              <button class="{{c.cls}}" sc-camel-on-click="{{c.tap}}" aria-pressed="{{c.on}}" aria-label="{{c.aria}}"></button>
+            </sc-for>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <sc-for list="{{nbPresets}}" as="p" hint-placeholder-count="4">
+              <button class="{{p.cls}}" sc-camel-on-click="{{p.pick}}" style="text-align: left">{{p.name}}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span style="font-size: 12px; color: #D9D9D9">Born with</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 3px">
+          <sc-for list="{{bBits}}" as="b" hint-placeholder-count="9">
+            <button class="{{b.cls}}" sc-camel-on-click="{{b.tap}}" aria-pressed="{{b.on}}" aria-label="{{b.aria}}">{{b.n}}</button>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; color: #D9D9D9">Survives with</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 3px">
+          <sc-for list="{{sBits}}" as="b" hint-placeholder-count="9">
+            <button class="{{b.cls}}" sc-camel-on-click="{{b.tap}}" aria-pressed="{{b.on}}" aria-label="{{b.aria}}">{{b.n}}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="card">
+        <span style="font-size: 12px; color: #D9D9D9">Boundary · 64 × 40</span>
+        <div role="group" aria-label="Boundary" style="display: flex; gap: 2px; padding: 2px; background: #060606; border: 1px solid #242424; border-radius: 7px">
+          <sc-for list="{{bounds}}" as="o" hint-placeholder-count="2">
+            <button class="{{o.cls}}" sc-camel-on-click="{{o.pick}}" aria-pressed="{{o.on}}" style="flex: 1">{{o.name}}</button>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; color: #D9D9D9">Seed</span>
+        <div role="group" aria-label="Seed" style="display: flex; gap: 2px; padding: 2px; background: #060606; border: 1px solid #242424; border-radius: 7px">
+          <sc-for list="{{seeds}}" as="o" hint-placeholder-count="3">
+            <button class="{{o.cls}}" sc-camel-on-click="{{o.pick}}" aria-pressed="{{o.on}}" style="flex: 1">{{o.name}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 16px; box-sizing: border-box; height: 904px; overflow: auto">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+        <span style="font: 500 22px 'JetBrains Mono', monospace; color: #F9B3E8">{{code}}</span>
+        <span style="font-size: 12px; color: #A3A3A3">{{nbName}} · {{boundName}}</span>
+        <span style="margin-left: auto; font: 400 12px 'JetBrains Mono', monospace; color: #D9D9D9">gen {{genStr}} / 400 · {{popNow}} alive</span>
+      </div>
+
+      <div class="well" style="border: 1px solid #242424; border-radius: 10px; overflow: hidden; align-self: flex-start; max-width: 100%">
+        <svg width="768" height="480" sc-camel-view-box="0 0 768 480" role="img" aria-label="Top-down view of the grid at the selected generation" style="display: block; max-width: 100%; height: auto">
+          <path d="{{ghostPath}}" fill="#2C1428"></path>
+          <path d="{{alivePath}}" fill="#F06BD0"></path>
+          <path d="{{bornPath}}" fill="#FFE6F7"></path>
+        </svg>
+      </div>
+
+      <div class="card" style="gap: 8px">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <button class="prim" sc-camel-on-click="{{togglePlay}}" style="height: 30px">
+            <sc-if value="{{playing}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+            <sc-if value="{{notPlaying}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Play</sc-if>
+          </button>
+          <label for="scrub" class="lbl">Scrub</label>
+          <input id="scrub" type="range" min="0" max="400" step="1" value="{{gen}}" sc-camel-on-change="{{scrub}}" style="flex: 1">
+        </div>
+        <svg width="100%" height="120" sc-camel-view-box="0 0 800 120" sc-camel-preserve-aspect-ratio="none" role="img" aria-label="Population across 400 generations" style="background: #0B0C0E; border: 1px solid #242424; border-radius: 8px">
+          <path d="M0 30H800M0 60H800M0 90H800" stroke="rgba(255,255,255,.05)"></path>
+          <path d="{{stableBand}}" fill="rgba(76,195,240,.08)"></path>
+          <path d="{{popFill}}" fill="rgba(240,107,208,.14)"></path>
+          <path d="{{popLine}}" fill="none" stroke="#F06BD0" stroke-width="1.6" vector-effect="non-scaling-stroke"></path>
+          <path d="{{head}}" stroke="#4CC3F0" stroke-width="1.5" vector-effect="non-scaling-stroke"></path>
+        </svg>
+        <div style="display: flex; justify-content: space-between; font: 400 11px 'JetBrains Mono', monospace; color: #858585"><span>0</span><span>100</span><span>200</span><span>300</span><span>400 gens</span></div>
+      </div>
+    </main>
+
+    <aside aria-label="Script and analysis" style="flex: 1 0 340px; max-width: 380px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 16px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; height: 904px; overflow: auto">
+      <span class="lbl">Rule script</span>
+      <div class="card" style="background: #060606">
+        <pre class="code">{{script}}</pre>
+      </div>
+
+      <span class="lbl">Analysis</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{report}}" as="r" hint-placeholder-count="4">
+          <div style="border: 1px solid #242424; border-radius: 8px; padding: 9px 10px; background: #111111; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 11px; color: #A3A3A3">{{r.k}}</span>
+            <span style="font: 500 16px 'JetBrains Mono', monospace; color: {{r.c}}">{{r.v}}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size: 12px; line-height: 1.55; color: #D9D9D9; border: 1px solid #1D4A5C; background: #0C161B; border-radius: 8px; padding: 10px 12px">{{verdict}}</div>
+
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="lbl">Pattern export · RLE</span><span style="font-size: 11px; color: #A3A3A3">gen {{genStr}}</span></div>
+      <div class="card" style="background: #060606">
+        <pre class="code" style="white-space: pre-wrap; word-break: break-all; color: #A3A3A3">{{rle}}</pre>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:960}}">
+class Component extends DCLogic {
+  constructor(...a) {
+    super(...a);
+    this.W = 64; this.H = 40; this.G = 400;
+    this.presets = {
+      moore: { name: 'Moore r1', off: [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]] },
+      vn: { name: 'von Neumann', off: [[0, -1], [-1, 0], [1, 0], [0, 1]] },
+      hex: { name: 'Hexagonal', off: [[-1, -1], [0, -1], [-1, 0], [1, 0], [0, 1], [1, 1]] },
+      moore2: { name: 'Moore r2', off: [] }
+    };
+    for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) if (x || y) this.presets.moore2.off.push([x, y]);
+    this.state = { b: [3], s: [2, 3], off: this.presets.moore.off.slice(), bound: 'torus', seed: 'rpent', gen: 120, playing: false };
+    this.cacheKey = ''; this.frames = null;
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => { if (this.state.playing) this.setState({ gen: this.state.gen >= this.G ? 0 : this.state.gen + 1 }); }, 60);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  seedGrid(kind) {
+    const W = this.W, H = this.H, g = new Uint8Array(W * H);
+    const put = (rows, ox, oy) => rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === 'O') g[(oy + y) * W + ox + x] = 1; });
+    if (kind === 'rpent') put(['.OO', 'OO.', '.O.'], 31, 19);
+    else if (kind === 'acorn') put(['.O.....', '...O...', 'OO..OOO'], 29, 19);
+    else { let r = 7; for (let i = 0; i < W * H; i++) { r = (r * 1103515245 + 12345) % 2147483648; const x = i % W, y = Math.floor(i / W); if (x > 16 && x < 48 && y > 8 && y < 32 && r / 2147483648 < 0.33) g[i] = 1; } }
+    return g;
+  }
+  run() {
+    const st = this.state, key = st.b.join() + '|' + st.s.join() + '|' + st.off.map((o) => o.join(':')).join() + '|' + st.bound + '|' + st.seed;
+    if (key === this.cacheKey) return;
+    const W = this.W, H = this.H, torus = st.bound === 'torus';
+    const B = new Array(26).fill(false), S = new Array(26).fill(false);
+    st.b.forEach((n) => { B[n] = true; }); st.s.forEach((n) => { S[n] = true; });
+    let g = this.seedGrid(st.seed);
+    const frames = [g], seen = new Map(), pops = [];
+    let firstRepeat = -1, period = 0;
+    const hash = (a) => { let h1 = 2166136261, h2 = 0; for (let i = 0; i < a.length; i++) if (a[i]) { h1 = Math.imul(h1 ^ i, 16777619); h2 = (h2 + i * 2654435761) >>> 0; } return h1 + ':' + h2; };
+    seen.set(hash(g), 0);
+    pops.push(g.reduce((s, v) => s + v, 0));
+    for (let t = 1; t <= this.G; t++) {
+      const n = new Uint8Array(W * H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        let c = 0;
+        for (let k = 0; k < st.off.length; k++) {
+          let X = x + st.off[k][0], Y = y + st.off[k][1];
+          if (torus) { X = (X + W) % W; Y = (Y + H) % H; } else if (X < 0 || Y < 0 || X >= W || Y >= H) continue;
+          c += g[Y * W + X];
+        }
+        const i = y * W + x;
+        n[i] = g[i] ? (S[c] ? 1 : 0) : (B[c] ? 1 : 0);
+      }
+      g = n; frames.push(g); pops.push(g.reduce((s, v) => s + v, 0));
+      if (firstRepeat < 0) { const h = hash(g); if (seen.has(h)) { firstRepeat = seen.get(h); period = t - firstRepeat; } else seen.set(h, t); }
+    }
+    this.frames = frames; this.pops = pops; this.firstRepeat = firstRepeat; this.period = period; this.cacheKey = key;
+  }
+  rle(g) {
+    const W = this.W, H = this.H;
+    let x0 = W, x1 = -1, y0 = H, y1 = -1;
+    for (let i = 0; i < g.length; i++) if (g[i]) { const x = i % W, y = Math.floor(i / W); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    if (x1 < 0) return 'x = 0, y = 0\n!';
+    let body = '';
+    for (let y = y0; y <= y1; y++) {
+      let row = '', cur = null, run = 0;
+      const flush = () => { if (run) row += (run > 1 ? run : '') + cur; };
+      for (let x = x0; x <= x1; x++) { const ch = g[y * W + x] ? 'o' : 'b'; if (ch === cur) run++; else { flush(); cur = ch; run = 1; } }
+      if (cur === 'o') flush();
+      body += row + (y < y1 ? '$' : '!');
+    }
+    const head = 'x = ' + (x1 - x0 + 1) + ', y = ' + (y1 - y0 + 1) + ', rule = ' + this.code() + '\n';
+    return head + (body.length > 420 ? body.slice(0, 420) + '…' : body);
+  }
+  code() { return 'B' + this.state.b.join('') + '/S' + this.state.s.join(''); }
+  renderVals() {
+    this.run();
+    const st = this.state, W = this.W, cs = 12;
+    const g = this.frames[st.gen], prev = st.gen ? this.frames[st.gen - 1] : null;
+    let alive = '', born = '', ghost = '';
+    for (let i = 0; i < g.length; i++) {
+      const x = (i % W) * cs + 1, y = Math.floor(i / W) * cs + 1, r = 'M' + x + ' ' + y + 'h10v10h-10z';
+      if (g[i]) { if (prev && !prev[i]) born += r; else alive += r; } else if (prev && prev[i]) ghost += r;
+    }
+    const nbSet = new Set(st.off.map((o) => o.join(':')));
+    const nbCells = [];
+    for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) {
+      const me = !x && !y, on = nbSet.has(x + ':' + y);
+      nbCells.push({ on, cls: me ? 'nb nb-me' : on ? 'nb nb-on' : 'nb', aria: me ? 'This cell' : 'Neighbour ' + x + ', ' + y, tap: me ? () => {} : () => { const off = on ? st.off.filter((o) => !(o[0] === x && o[1] === y)) : st.off.concat([[x, y]]); const N = off.length; this.setState({ off, b: st.b.filter((n) => n <= N), s: st.s.filter((n) => n <= N) }); } });
+    }
+    const pk = Object.keys(this.presets).find((k) => { const o = this.presets[k].off; return o.length === st.off.length && o.every((p) => nbSet.has(p.join(':'))); });
+    const nbPresets = Object.keys(this.presets).map((k) => ({ name: this.presets[k].name, cls: pk === k ? 'mini mini-on' : 'mini', pick: () => { const off = this.presets[k].off.slice(); this.setState({ off, b: st.b.filter((n) => n <= off.length), s: st.s.filter((n) => n <= off.length) }); } }));
+    const N = st.off.length;
+    const bits = (key) => Array.from({ length: N + 1 }, (_, n) => n).map((n) => { const on = st[key].indexOf(n) >= 0; return { n, on, cls: on ? 'bit bit-on' : 'bit', aria: (key === 'b' ? 'Born with ' : 'Survives with ') + n, tap: () => this.setState({ [key]: (on ? st[key].filter((v) => v !== n) : st[key].concat([n])).sort((p, q) => p - q) }) }; });
+    const opt = (list, key) => list.map(([id, name]) => ({ name, on: st[key] === id, cls: st[key] === id ? 'mini mini-on' : 'mini', pick: () => this.setState({ [key]: id }) }));
+    const pops = this.pops, mx = Math.max(10, ...pops);
+    const PX = (t) => (t / this.G * 800).toFixed(1), PY = (v) => (114 - v / mx * 104).toFixed(1);
+    const popLine = pops.map((v, t) => (t ? 'L' : 'M') + PX(t) + ' ' + PY(v)).join(' ');
+    const peak = pops.reduce((m, v, t) => (v > m.v ? { v, t } : m), { v: -1, t: 0 });
+    const fr = this.firstRepeat, per = this.period;
+    const nbName = pk ? this.presets[pk].name : 'Custom (' + N + ' cells)';
+    const seedName = { rpent: 'r_pentomino @ (32,20)', acorn: 'acorn @ (32,20)', soup: 'soup seed=7 density=0.33' }[st.seed];
+    const script = [
+      '* automata netlist · glider-garden.rule',
+      '.rule   life_like  ' + this.code(),
+      '.neigh  ' + (pk ? pk : 'custom') + '  n=' + N,
+      '.grid   64x40  boundary=' + st.bound,
+      '.seed   ' + seedName,
+      '.run    gens=400',
+      '.probe  population  -> plot1',
+      '.probe  period      -> report',
+      '.end'
+    ].join('\n');
+    let verdict;
+    if (pops[this.G] === 0) verdict = 'Dies out by gen ' + pops.indexOf(0) + '.';
+    else if (fr >= 0) verdict = per === 1 ? 'Freezes into still lifes at gen ' + fr + '.' : 'Settles into a period-' + per + ' cycle at gen ' + fr + '.';
+    else verdict = 'No repeat within 400 gens.';
+    return {
+      code: this.code(), nbName, boundName: st.bound === 'torus' ? 'wraps at edges' : 'dead edges', nbCount: N,
+      genStr: String(st.gen).padStart(3, '0'), gen: st.gen, popNow: pops[st.gen],
+      alivePath: alive, bornPath: born, ghostPath: ghost,
+      nbCells, nbPresets, bBits: bits('b'), sBits: bits('s'),
+      bounds: opt([['torus', 'Torus'], ['dead', 'Dead edge']], 'bound'),
+      seeds: opt([['rpent', 'R-pentomino'], ['acorn', 'Acorn'], ['soup', 'Soup']], 'seed'),
+      popLine, popFill: popLine + ' L800 120 L0 120 Z', head: 'M' + PX(st.gen) + ' 0V120',
+      stableBand: fr >= 0 ? 'M' + PX(fr) + ' 0H800V120H' + PX(fr) + 'Z' : '',
+      playing: st.playing, notPlaying: !st.playing,
+      togglePlay: () => this.setState({ playing: !st.playing }),
+      scrub: (e) => this.setState({ gen: Number(e.target.value), playing: false }),
+      script, verdict, rle: this.rle(g),
+      report: [
+        { k: 'Peak population', v: peak.v + ' @ ' + peak.t, c: '#F9B3E8' },
+        { k: 'Final population', v: pops[this.G], c: '#EAEAEA' },
+        { k: 'First repeat', v: fr >= 0 ? 'gen ' + (fr + per) : 'none', c: '#4CC3F0' },
+        { k: 'Period', v: fr >= 0 ? per : '—', c: '#4CC3F0' }
+      ]
+    };
+  }
+}
+</script>
+
+
+</body></html>

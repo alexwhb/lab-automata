@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Automata Playground — Terrarium</title>
+<script src="98d6f408-8b62-4d9a-b20e-47419fd301e2"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+a{color:#4CC3F0}a:hover{color:#8AD8F5}
+.lbl{font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.ghost:hover{background:#1F1F1F;color:#D9D9D9}
+.prim{border:1px solid #6B2A5C;background:#22101D;color:#F9B3E8;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.prim:hover{background:#2E1427}
+.big{height:44px;font-size:14px;justify-content:center;width:100%}
+.sw{width:32px;height:32px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.tab{color:#A3A3A3;font:500 12px Inter,system-ui,sans-serif;height:44px;padding:0 2px;display:flex;align-items:center;border-bottom:2px solid transparent;text-decoration:none;box-sizing:border-box}
+.tab:hover{color:#EAEAEA}
+.tab-on{color:#F5F5F5;border-bottom-color:#F06BD0}
+.keep{border:1px solid #2E2E2E;background:#141414;color:#A3A3A3;font:500 12px Inter,system-ui,sans-serif;height:30px;padding:0 10px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.keep:hover{border-color:#6B2A5C;color:#EAEAEA}
+.keep-on{border-color:#F06BD0;background:#22101D;color:#F9B3E8}
+.jarcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 14px 16px;border-radius:14px;border:1px solid #1E1F24;background:rgba(14,15,18,.6)}
+.jarcard-on{border-color:#6B2A5C;background:rgba(34,16,29,.45)}
+input[type=range]{accent-color:#F06BD0;width:100%;margin:0;height:28px}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.bob{animation:bob 3s ease-in-out infinite}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.8); flex-wrap: wrap">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#F06BD0" stroke-width="1.5"></rect><rect x="11" y="5.5" width="4" height="4" rx="1" fill="#4CC3F0"></rect><rect x="16.5" y="11" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="5.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="11" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="16.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Automata Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">terrarium</span>
+    </div>
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px; margin-left: 12px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M7 1.5 12.5 4.5 7 7.5 1.5 4.5z"></path><path d="M1.5 4.5v5L7 12.5l5.5-3v-5"></path><path d="M7 7.5v5"></path></svg>
+        Playground
+      </a>
+      <a class="seg" href="Advanced.dc.html">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 3.5h10M2 7h6M2 10.5h8"></path><path d="M10.5 6l1.5 1-1.5 1"></path></svg>
+        Advanced
+      </a>
+    </nav>
+    <div role="group" aria-label="Switch app" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="sw" href="Identity.dc.html" aria-label="Breadbox circuit app"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3.5" fill="none" stroke="#F2A33A" stroke-width="1.3"></rect><circle cx="5" cy="5.5" r="1.1" fill="#F2A33A"></circle><circle cx="11" cy="5.5" r="1.1" fill="#F2A33A"></circle><path d="M5 5.5C5 11 11 8 11 11" fill="none" stroke="#F2A33A" stroke-width="1.2" stroke-linecap="round"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Chem Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#86A2FF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.8h4M6.6 1.8v4L2.8 12.6a1.1 1.1 0 0 0 1 1.6h8.4a1.1 1.1 0 0 0 1-1.6L9.4 5.8v-4"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Bio Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#4BE3A0" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 2c0 4 7 6 7 12M11.5 2c0 4-7 6-7 12"></path></svg></a>
+      <a class="sw sw-on" href="Main.dc.html" aria-label="Automata Playground (current)"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="6.5" y="2" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="6.5" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="2" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="6.5" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect></svg></a>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button class="prim" sc-camel-on-click="{{toggleRun}}">
+        <sc-if value="{{running}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{paused}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Run</sc-if>
+      </button>
+      <button class="ghost" sc-camel-on-click="{{reseed}}">Fresh soup</button>
+      <span style="font: 400 12px 'JetBrains Mono', monospace; color: #A3A3A3; padding: 0 8px">brood {{brood}}</span>
+      <button class="ghost">Share</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; height: 844px">
+      <div style="min-height: 44px; display: flex; align-items: center; gap: 18px; padding: 0 14px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.8); flex-wrap: wrap">
+        <nav aria-label="Benches" style="display: flex; gap: 18px">
+          <a class="tab" href="Main.dc.html">Tray · 2D</a>
+          <a class="tab" href="Loom.dc.html">Loom · 1D</a>
+          <a class="tab tab-on" href="Terrarium.dc.html" aria-current="page">Terrarium · breed</a>
+        </nav>
+        <span style="margin-left: auto; font-size: 12px; color: #A3A3A3">Keep the jars you like, then breed.</span>
+      </div>
+
+      <div class="graph" style="flex: 1 1 auto; overflow: auto; padding: 22px; box-sizing: border-box">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px">
+          <sc-for list="{{jars}}" as="j" hint-placeholder-count="6">
+            <div class="{{j.card}}">
+              <div style="position: relative; width: 272px; height: 228px">
+                <div style="position: absolute; left: 26px; top: 196px; width: 220px; height: 30px; border-radius: 50%; background: rgba(0,0,0,.75); filter: blur(10px)"></div>
+                <div class="bob" style="position: absolute; left: 0; top: 0; width: 272px; height: 272px; animation-delay: {{j.delay}}">
+                <div style="position: absolute; left: 0; top: 0; width: 272px; height: 272px; transform: perspective(900px) rotateX(52deg) scale(.86); transform-origin: 50% 70%">
+                  <div style="position: absolute; inset: 0; border-radius: 26px; background: #121318; border: 2px solid #2E3138; box-shadow: 0 16px 0 #0B0C0E, 0 16px 0 2px #2E3138, inset 0 0 0 6px #17181D"></div>
+                  <svg width="256" height="256" sc-camel-view-box="0 0 256 256" role="img" aria-label="{{j.aria}}" style="position: absolute; left: 8px; top: 8px; border-radius: 20px">
+                    <path d="{{j.path}}" fill="{{j.ink}}"></path>
+                  </svg>
+                  <div style="position: absolute; left: 14px; top: 10px; width: 120px; height: 46px; border-radius: 20px; background: linear-gradient(120deg, rgba(255,255,255,.08), rgba(255,255,255,0)); pointer-events: none"></div>
+                </div>
+                </div>
+              </div>
+              <div style="width: 100%; display: flex; align-items: center; gap: 10px">
+                <span style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+                  <span style="font: 500 15px 'JetBrains Mono', monospace; color: {{j.codeInk}}">{{j.code}}</span>
+                  <span style="font-size: 11.5px; color: #A3A3A3">{{j.name}}</span>
+                </span>
+                <button class="{{j.keepCls}}" sc-camel-on-click="{{j.keep}}" aria-pressed="{{j.kept}}">
+                  <svg width="13" height="13" sc-camel-view-box="0 0 14 14" aria-hidden="true"><path d="M7 12.2 2.1 7.4A2.9 2.9 0 0 1 7 3.3a2.9 2.9 0 0 1 4.9 4.1z" fill="{{j.heart}}" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"></path></svg>{{j.keepLabel}}
+                </button>
+              </div>
+              <div style="width: 100%; display: flex; align-items: center; gap: 8px">
+                <span style="font-size: 11px; color: #A3A3A3; width: 58px">Liveliness</span>
+                <span style="flex: 1; height: 6px; border-radius: 3px; background: #1B1C21; position: relative; overflow: hidden"><span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{j.live}}; background: {{j.meter}}; border-radius: 3px"></span></span>
+                <span style="font: 400 11px 'JetBrains Mono', monospace; color: #D9D9D9; width: 74px; text-align: right">{{j.popTxt}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </main>
+
+    <aside aria-label="Breeding" style="flex: 1 0 320px; max-width: 360px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 16px; display: flex; flex-direction: column; gap: 16px; height: 844px; overflow: auto; box-sizing: border-box">
+      <section aria-label="Breed" style="display: flex; flex-direction: column; gap: 10px">
+        <span class="lbl">Breeding</span>
+        <span style="font-size: 13px; line-height: 1.55; color: #D9D9D9">Children mix their parents’ rules, plus a few random flips.</span>
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <label for="mut" class="lbl">Mutation</label>
+          <span style="font: 400 12px 'JetBrains Mono', monospace; color: #D9D9D9">{{mut}} bit flips</span>
+        </div>
+        <input id="mut" type="range" min="1" max="4" step="1" value="{{mut}}" sc-camel-on-change="{{setMut}}">
+        <button class="prim big" sc-camel-on-click="{{breed}}">
+          <svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3 2c0 4 10 4 10 8s-5 4-5 4"></path><path d="M13 2c0 4-10 4-10 8s5 4 5 4"></path></svg>{{breedLabel}}
+        </button>
+        <span style="font-size: 12px; color: #A3A3A3">{{keptNote}}</span>
+      </section>
+
+      <section aria-label="Lineage" style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #242424; padding-top: 14px">
+        <span class="lbl">Lineage</span>
+        <sc-if value="{{noLineage}}" hint-placeholder-val="{{ true }}">
+          <span style="font-size: 12px; color: #858585; border: 1px dashed #2E2E2E; border-radius: 8px; padding: 12px">Nothing bred yet.</span>
+        </sc-if>
+        <sc-for list="{{lineage}}" as="l" hint-placeholder-count="0">
+          <div style="display: flex; align-items: flex-start; gap: 10px">
+            <span style="font: 400 11px 'JetBrains Mono', monospace; color: #858585; width: 54px; padding-top: 3px">brood {{l.n}}</span>
+            <span style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1">
+              <sc-for list="{{l.codes}}" as="c" hint-placeholder-count="2">
+                <span style="font: 400 11px 'JetBrains Mono', monospace; color: #F9B3E8; border: 1px solid #6B2A5C; background: #1A0E17; padding: 2px 6px; border-radius: 4px">{{c.v}}</span>
+              </sc-for>
+            </span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-label="Take it further" style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #242424; padding-top: 14px">
+        <span class="lbl">Use a favourite</span>
+        <a class="ghost" href="Main.dc.html">Plant in the Tray</a>
+        <a class="ghost" href="Advanced.dc.html">Analyse in Rule lab</a>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(...a) {
+    super(...a);
+    this.N = 32;
+    this.inks = ['#F06BD0', '#F3DC6B', '#B79CFF', '#4BE3A0', '#FF8E7A', '#6CCBF5'];
+    this.named = { 'B3/S23': 'Life', 'B36/S23': 'HighLife', 'B3678/S34678': 'Day & Night', 'B3/S12345': 'Maze', 'B36/S125': '2×2', 'B368/S245': 'Move', 'B2/S': 'Seeds', 'B3/S45678': 'Coral' };
+    const rules = [[[3], [2, 3]], [[3, 6], [2, 3]], [[3, 6, 7, 8], [3, 4, 6, 7, 8]], [[3], [1, 2, 3, 4, 5]], [[3, 6], [1, 2, 5]], [[3, 6, 8], [2, 4, 5]]];
+    this.state = { jars: rules.map((r) => this.makeJar(r[0], r[1])), kept: [], brood: 1, lineage: [], running: true, mut: 2 };
+  }
+  soup() { const g = new Uint8Array(this.N * this.N); for (let i = 0; i < g.length; i++) { const x = i % this.N, y = Math.floor(i / this.N); if (x > 5 && x < 26 && y > 5 && y < 26 && Math.random() < 0.38) g[i] = 1; } return g; }
+  makeJar(b, s) { return { b: b.slice().sort((p, q) => p - q), s: s.slice().sort((p, q) => p - q), g: this.soup(), act: [] }; }
+  componentDidMount() { this.timer = setInterval(() => { if (this.state.running) this.tick(); }, 140); }
+  componentWillUnmount() { clearInterval(this.timer); }
+  tick() {
+    const N = this.N;
+    const jars = this.state.jars.map((j) => {
+      const g = j.g, n = new Uint8Array(N * N);
+      let ch = 0;
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        let c = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) c += g[((y + dy + N) % N) * N + (x + dx + N) % N];
+        const i = y * N + x, v = g[i] ? (j.s.indexOf(c) >= 0 ? 1 : 0) : (j.b.indexOf(c) >= 0 ? 1 : 0);
+        n[i] = v; if (v !== g[i]) ch++;
+      }
+      return { b: j.b, s: j.s, g: n, act: j.act.concat([ch / (N * N)]).slice(-12) };
+    });
+    this.setState({ jars });
+  }
+  code(j) { return 'B' + j.b.join('') + '/S' + j.s.join(''); }
+  child(parents, mut) {
+    const A = parents[Math.floor(Math.random() * parents.length)], B2 = parents[Math.floor(Math.random() * parents.length)];
+    const bits = [];
+    for (let n = 1; n <= 8; n++) bits.push(['b', n, (Math.random() < 0.5 ? A : B2).b.indexOf(n) >= 0]);
+    for (let n = 0; n <= 8; n++) bits.push(['s', n, (Math.random() < 0.5 ? A : B2).s.indexOf(n) >= 0]);
+    for (let k = 0; k < mut; k++) { const i = Math.floor(Math.random() * bits.length); bits[i][2] = !bits[i][2]; }
+    let b = bits.filter((x) => x[0] === 'b' && x[2]).map((x) => x[1]);
+    const s = bits.filter((x) => x[0] === 's' && x[2]).map((x) => x[1]);
+    if (!b.length) b = [3];
+    return this.makeJar(b, s);
+  }
+  renderVals() {
+    const st = this.state, cs = 8;
+    const jars = st.jars.map((j, idx) => {
+      let path = '';
+      for (let i = 0; i < j.g.length; i++) if (j.g[i]) path += 'M' + ((i % this.N) * cs + 0.5) + ' ' + (Math.floor(i / this.N) * cs + 0.5) + 'h7v7h-7z';
+      const pop = j.g.reduce((s, v) => s + v, 0);
+      const act = j.act.length ? j.act.reduce((s, v) => s + v, 0) / j.act.length : 0;
+      const live = Math.min(1, act * 6);
+      const kept = st.kept.indexOf(idx) >= 0, code = this.code(j), ink = this.inks[idx % this.inks.length];
+      return {
+        path, ink, code, codeInk: kept ? '#F9B3E8' : '#EAEAEA', name: this.named[code] || 'Mutant', kept,
+        card: kept ? 'jarcard jarcard-on' : 'jarcard', keepCls: kept ? 'keep keep-on' : 'keep', keepLabel: kept ? 'Kept' : 'Keep', heart: kept ? '#F06BD0' : 'none',
+        live: (live * 100).toFixed(0) + '%', meter: live < 0.08 ? '#5E5E5E' : live > 0.8 ? '#FF8E7A' : '#F06BD0',
+        popTxt: pop + ' alive', delay: (idx * 0.4).toFixed(1) + 's', aria: 'Jar running rule ' + code + ', ' + pop + ' cells alive',
+        keep: () => this.setState({ kept: kept ? st.kept.filter((k) => k !== idx) : st.kept.concat([idx]) })
+      };
+    });
+    const parents = (st.kept.length ? st.kept : [0, 1, 2, 3, 4, 5]).map((k) => st.jars[k]);
+    return {
+      jars, brood: st.brood, mut: st.mut, running: st.running, paused: !st.running,
+      breedLabel: 'Breed brood ' + (st.brood + 1),
+      keptNote: st.kept.length ? st.kept.length + ' kept as parents' : 'None kept: all six become parents',
+      lineage: st.lineage.slice().reverse().map((l) => ({ n: l.n, codes: l.codes.map((v) => ({ v })) })), noLineage: !st.lineage.length,
+      toggleRun: () => this.setState({ running: !st.running }),
+      reseed: () => this.setState({ jars: st.jars.map((j) => this.makeJar(j.b, j.s)) }),
+      setMut: (e) => this.setState({ mut: Number(e.target.value) }),
+      breed: () => {
+        const kids = [0, 1, 2, 3, 4, 5].map((i) => (i < st.kept.length ? this.makeJar(parents[i].b, parents[i].s) : this.child(parents, st.mut)));
+        this.setState({ jars: kids, kept: [], brood: st.brood + 1, lineage: st.lineage.concat([{ n: st.brood, codes: parents.map((p) => this.code(p)) }]).slice(-8) });
+      }
+    };
+  }
+}
+</script>
+
+
+</body></html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Automata Playground — series fit</title>
+<script src="70a15695-1006-48c0-b4e2-5e523f89f01c"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+a{color:#4CC3F0}a:hover{color:#8AD8F5}
+.lbl{font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.card{border:1px solid #242424;border-radius:10px;background:rgba(17,17,17,0.84);padding:18px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+</style>
+</helmet>
+<div class="paper" style="width: 1440px; min-height: 640px; box-sizing: border-box; padding: 48px 56px; display: flex; flex-direction: column; gap: 24px; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+  <div style="display: flex; flex-direction: column; gap: 8px">
+    <span class="lbl">SPICE-for-X series · fourth bench</span>
+    <h1 style="margin: 0; font: 600 36px/1.1 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.02em">Same family, one new accent</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #D9D9D9; max-width: 880px">Shares the greys, grid ground, header and 2.5D bench. Adds one magenta ramp, a cell-age scale and cell-glyph icons.</p>
+  </div>
+
+  <section aria-label="App identities" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+    <sc-for list="{{apps}}" as="a" hint-placeholder-count="4">
+      <div class="card" style="border-color: {{a.edge}}">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid {{a.acc}}; background: #171717; display: flex; align-items: center; justify-content: center"><span style="width: 12px; height: 12px; border-radius: 3px; background: {{a.acc}}"></span></span>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+            <span style="font: 600 17px 'Space Grotesk', Inter, sans-serif">{{a.name}}</span>
+            <span style="font-size: 12px; color: #A3A3A3">{{a.domain}}</span>
+          </div>
+          <span style="font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid {{a.edge}}; color: {{a.ink}}; background: {{a.tint}}">{{a.tag}}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <sc-for list="{{a.ramp}}" as="c" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <span style="height: 36px; border-radius: 6px; background: {{c.hex}}; border: 1px solid #2E2E2E"></span>
+              <span style="font-size: 11px; color: #D9D9D9">{{c.role}}</span>
+              <span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">{{c.hex}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px">
+    <section class="card" aria-label="Cell-age scale">
+      <span class="lbl" style="color: #F9B3E8">Cell-age scale · automata only</span>
+      <div style="display: flex; gap: 10px; align-items: flex-end">
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 8px; background: #FFE6F7; box-shadow: 0 6px 0 #B34E9C, 0 0 16px rgba(255,170,232,.7)"></span><span style="font-size: 11px; color: #D9D9D9; margin-top: 6px">Newborn</span><span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">#FFE6F7</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 8px; background: #F06BD0; box-shadow: 0 6px 0 #8A2F76"></span><span style="font-size: 11px; color: #D9D9D9; margin-top: 6px">Alive</span><span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">#F06BD0</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 8px; background: #B24C9C; box-shadow: 0 6px 0 #561C49"></span><span style="font-size: 11px; color: #D9D9D9; margin-top: 6px">Elder</span><span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">#B24C9C</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 8px; background: #3B1734"></span><span style="font-size: 11px; color: #D9D9D9; margin-top: 6px">Trail</span><span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">#3B1734</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px; align-items: center"><span style="width: 40px; height: 40px; border-radius: 8px; background: #1B1C21; border: 1px solid #2E2E2E; box-sizing: border-box"></span><span style="font-size: 11px; color: #D9D9D9; margin-top: 6px">Empty</span><span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #A3A3A3">#1B1C21</span></div>
+      </div>
+      <span style="font-size: 12px; line-height: 1.5; color: #A3A3A3">Reads in greyscale too. Live cells lift 6 px off the tray.</span>
+    </section>
+
+    <section class="card" aria-label="Shared with the series">
+      <span class="lbl">Shared, unchanged</span>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #D9D9D9; line-height: 1.45">
+        <span>Neutrals, grid ground, tilted bench</span>
+        <span>Header, mode switch, app switcher, Run · Step</span>
+        <span>Parts palette (here: rules and stamps)</span>
+        <span>Advanced mode as a netlist-style script</span>
+        <span>Space Grotesk, Inter, JetBrains Mono</span>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Icon family" style="border-color: #6B2A5C">
+      <span class="lbl" style="color: #F9B3E8">Icon family · cell glyphs</span>
+      <div style="display: flex; gap: 10px">
+        <sc-for list="{{icons}}" as="ic" hint-placeholder-count="5">
+          <span style="width: 48px; height: 48px; border: 1px solid #242424; border-radius: 8px; background: #111111; display: flex; align-items: center; justify-content: center"><svg width="27" height="27" sc-camel-view-box="0 0 27 27" aria-hidden="true"><path d="{{ic.grey}}" fill="#3A3A3A"></path><path d="{{ic.on}}" fill="#F06BD0"></path></svg></span>
+        </sc-for>
+      </div>
+      <span style="font-size: 12px; line-height: 1.5; color: #A3A3A3">3 × 3 cell grids: grey empty, magenta live.</span>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:640}}">
+class Component extends DCLogic {
+  renderVals() {
+    const ramp = (a, i, t, e) => [{ role: 'Accent', hex: a }, { role: 'Ink', hex: i }, { role: 'Tint', hex: t }, { role: 'Edge', hex: e }];
+    const apps = [
+      { name: 'Breadbox', domain: 'Circuits · SPICE', tag: 'existing', acc: '#F2A33A', ink: '#F7C77A', tint: '#1D1810', edge: '#6B4A16', ramp: ramp('#F2A33A', '#F7C77A', '#1D1810', '#6B4A16') },
+      { name: 'Chem Playground', domain: 'Reactions · kinetics', tag: 'existing', acc: '#86A2FF', ink: '#B3C4FF', tint: '#161C2E', edge: '#3B4C7A', ramp: ramp('#86A2FF', '#B3C4FF', '#161C2E', '#3B4C7A') },
+      { name: 'Bio Playground', domain: 'Gene circuits · populations', tag: 'existing', acc: '#4BE3A0', ink: '#A6F5CF', tint: '#0E2419', edge: '#1E5C42', ramp: ramp('#4BE3A0', '#A6F5CF', '#0E2419', '#1E5C42') },
+      { name: 'Automata Playground', domain: 'Cellular automata · rules', tag: 'new', acc: '#F06BD0', ink: '#F9B3E8', tint: '#22101D', edge: '#6B2A5C', ramp: ramp('#F06BD0', '#F9B3E8', '#22101D', '#6B2A5C') }
+    ];
+    const cell = (x, y) => 'M' + (1 + x * 9) + ' ' + (1 + y * 9) + 'h7v7h-7z';
+    const icon = (onList) => {
+      let grey = '', on = '';
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { if (onList.some((p) => p[0] === x && p[1] === y)) on += cell(x, y); else grey += cell(x, y); }
+      return { grey, on };
+    };
+    const icons = [
+      icon([[1, 0], [2, 1], [0, 2], [1, 2], [2, 2]]),
+      icon([[0, 1], [1, 1], [2, 1]]),
+      icon([[0, 0], [1, 0], [0, 1], [1, 1]]),
+      icon([[0, 0], [1, 0], [2, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2]]),
+      icon([[0, 0], [2, 0], [0, 2], [2, 2]])
+    ];
+    return { apps, icons };
+  }
+}
+</script>
+
+
+</body></html>

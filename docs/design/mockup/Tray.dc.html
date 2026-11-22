@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Automata Playground — the Tray</title>
+<script src="3913f549-dd48-4b37-a23b-61c3a5045725"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style></style>
+<style>
+body{margin:0;background:#0A0A0A}
+.paper{background-color:#0A0A0A;background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.016) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.016) 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+.graph{background-color:#0B0C0E;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+.floor{background-color:#121316;background-image:linear-gradient(rgba(255,255,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.09) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:120px 120px,120px 120px,24px 24px,24px 24px}
+a{color:#4CC3F0}a:hover{color:#8AD8F5}
+.lbl{font:600 11px Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#A3A3A3}
+.seg{border:0;background:transparent;color:#A3A3A3;font:500 13px Inter,system-ui,sans-serif;padding:0 14px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;text-decoration:none}
+.seg:hover{color:#EAEAEA}
+.seg-on{background:#2A2A2A;color:#F5F5F5}
+.ghost{border:1px solid #2E2E2E;background:#171717;color:#D9D9D9;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.ghost:hover{background:#1F1F1F}
+.prim{border:1px solid #6B2A5C;background:#22101D;color:#F9B3E8;font:500 13px Inter,system-ui,sans-serif;height:32px;padding:0 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.prim:hover{background:#2E1427}
+.sw{width:32px;height:32px;border:0;border-radius:6px;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.sw:hover{background:#1C1C1C}
+.sw-on{background:#2A2A2A}
+.tab{color:#A3A3A3;font:500 12px Inter,system-ui,sans-serif;height:44px;padding:0 2px;display:flex;align-items:center;border-bottom:2px solid transparent;text-decoration:none;box-sizing:border-box}
+.tab:hover{color:#EAEAEA}
+.tab-on{color:#F5F5F5;border-bottom-color:#F06BD0}
+.cart{display:flex;align-items:center;gap:10px;width:100%;border:1px solid #242424;border-radius:10px;background:rgba(18,18,18,0.92);color:#EAEAEA;padding:8px 10px;cursor:pointer;text-align:left;font-family:Inter,system-ui,sans-serif}
+.cart:hover{border-color:#6B2A5C;background:#1A1018}
+.cart-on{border-color:#F06BD0;background:#22101D}
+.stamp{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:78px;border:1px solid #242424;border-radius:10px;background:rgba(18,18,18,0.92);color:#EAEAEA;font:600 11.5px/1.2 Inter,system-ui,sans-serif;cursor:pointer;padding:8px 4px}
+.stamp:hover{border-color:#6B2A5C;background:#1A1018}
+.stamp-on{border-color:#F06BD0;background:#22101D;color:#F9B3E8}
+.bit{width:28px;height:30px;border:1px solid #2E2E2E;border-radius:6px;background:#141414;color:#A3A3A3;font:500 12px 'JetBrains Mono',monospace;cursor:pointer;padding:0}
+.bit:hover{border-color:#6B2A5C;color:#EAEAEA}
+.bit-on{background:#F06BD0;border-color:#F06BD0;color:#1A0A16;box-shadow:0 3px 0 #8A2F76}
+.tog{border:1px solid #2E2E2E;background:#141414;color:#A3A3A3;font:500 12px Inter,system-ui,sans-serif;height:28px;padding:0 10px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.tog-on{border-color:#6B2A5C;background:#22101D;color:#F9B3E8}
+input[type=range]{accent-color:#F06BD0;width:100%;margin:0;height:28px}
+.chip{position:absolute;padding:4px 9px;border-radius:6px;background:rgba(11,12,14,.9);border:1px solid #2A2D33;font:400 12px 'JetBrains Mono',monospace;color:#ECEAE6;white-space:nowrap}
+.cell{width:16px;height:16px;border:0;padding:0;margin:0;border-radius:4px;background:#1B1C21;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);cursor:crosshair;transition:transform .14s ease-out,background-color .2s,box-shadow .2s}
+.cell:hover{background:#2A2B33}
+.t3{background:#3B1734}.t2{background:#2C1428}.t1{background:#22131F}
+.cn{background:#FFE6F7;transform:translateY(-6px);box-shadow:0 6px 0 #B34E9C,0 0 16px rgba(255,170,232,.75)}
+.ca{background:#F06BD0;transform:translateY(-6px);box-shadow:0 6px 0 #8A2F76,0 0 10px rgba(240,107,208,.42)}
+.co{background:#B24C9C;transform:translateY(-6px);box-shadow:0 6px 0 #561C49}
+.cn:hover,.ca:hover,.co:hover{background:#FFFFFF}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+</style>
+</helmet>
+<div class="paper" style="min-height: 900px; display: flex; flex-direction: column; color: #EAEAEA; font-family: Inter, system-ui, sans-serif">
+
+  <header style="min-height: 56px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.8); flex-wrap: wrap">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <svg width="26" height="26" sc-camel-view-box="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="6" fill="#171717" stroke="#F06BD0" stroke-width="1.5"></rect><rect x="11" y="5.5" width="4" height="4" rx="1" fill="#4CC3F0"></rect><rect x="16.5" y="11" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="5.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="11" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect><rect x="16.5" y="16.5" width="4" height="4" rx="1" fill="#F06BD0"></rect></svg>
+      <span style="font: 600 16px 'Space Grotesk', Inter, sans-serif; letter-spacing: -0.01em">Automata Playground</span>
+      <span style="color: #4A4A4A">/</span>
+      <span style="font-size: 13px; color: #D9D9D9">glider-garden</span>
+    </div>
+
+    <nav aria-label="Mode" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px; margin-left: 12px">
+      <a class="seg seg-on" href="Main.dc.html" aria-current="page">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M7 1.5 12.5 4.5 7 7.5 1.5 4.5z"></path><path d="M1.5 4.5v5L7 12.5l5.5-3v-5"></path><path d="M7 7.5v5"></path></svg>
+        Playground
+      </a>
+      <a class="seg" href="Advanced.dc.html">
+        <svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 3.5h10M2 7h6M2 10.5h8"></path><path d="M10.5 6l1.5 1-1.5 1"></path></svg>
+        Advanced
+      </a>
+    </nav>
+
+    <div role="group" aria-label="Switch app" style="display: flex; gap: 2px; padding: 3px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px">
+      <a class="sw" href="Identity.dc.html" aria-label="Breadbox circuit app"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3.5" fill="none" stroke="#F2A33A" stroke-width="1.3"></rect><circle cx="5" cy="5.5" r="1.1" fill="#F2A33A"></circle><circle cx="11" cy="5.5" r="1.1" fill="#F2A33A"></circle><path d="M5 5.5C5 11 11 8 11 11" fill="none" stroke="#F2A33A" stroke-width="1.2" stroke-linecap="round"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Chem Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#86A2FF" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.8h4M6.6 1.8v4L2.8 12.6a1.1 1.1 0 0 0 1 1.6h8.4a1.1 1.1 0 0 0 1-1.6L9.4 5.8v-4"></path></svg></a>
+      <a class="sw" href="Identity.dc.html" aria-label="Bio Playground"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true" fill="none" stroke="#4BE3A0" stroke-width="1.4" stroke-linecap="round"><path d="M4.5 2c0 4 7 6 7 12M11.5 2c0 4-7 6-7 12"></path></svg></a>
+      <a class="sw sw-on" href="Main.dc.html" aria-label="Automata Playground (current)"><svg width="16" height="16" sc-camel-view-box="0 0 16 16" aria-hidden="true"><rect x="6.5" y="2" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="6.5" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="2" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="6.5" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect><rect x="11" y="11" width="3" height="3" rx=".7" fill="#F06BD0"></rect></svg></a>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap">
+      <button class="prim" sc-camel-on-click="{{toggleRun}}">
+        <sc-if value="{{running}}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" rx="0.6" fill="currentColor"></rect></svg>Pause</sc-if>
+        <sc-if value="{{paused}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M3 1.5l7 4.5-7 4.5z" fill="currentColor"></path></svg>Run</sc-if>
+      </button>
+      <button class="ghost" sc-camel-on-click="{{stepOnce}}">
+        <svg width="12" height="12" sc-camel-view-box="0 0 12 12" aria-hidden="true"><path d="M2 1.5l6 4.5-6 4.5z" fill="currentColor"></path><rect x="8.6" y="1.5" width="1.8" height="9" rx="0.5" fill="currentColor"></rect></svg>Step
+      </button>
+      <button class="ghost" sc-camel-on-click="{{restart}}">
+        <svg width="12" height="12" sc-camel-view-box="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 1 0 1.7-4"></path><path d="M2.5 2.5V6H6"></path></svg>Restart
+      </button>
+      <span style="font: 400 12px 'JetBrains Mono', monospace; color: #A3A3A3; padding: 0 8px">gen {{genStr}}</span>
+      <button class="ghost">Share</button>
+    </div>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; flex: 1 1 auto; min-height: 0">
+
+    <aside aria-label="Cartridges and stamps" style="flex: 0 0 248px; border-right: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 14px 12px; display: flex; flex-direction: column; gap: 14px; height: 844px; overflow: auto; box-sizing: border-box">
+      <span class="lbl">Rules</span>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <sc-for list="{{carts}}" as="c" hint-placeholder-count="6">
+          <button class="{{c.cls}}" sc-camel-on-click="{{c.pick}}" aria-pressed="{{c.on}}">
+            <span style="width: 34px; height: 26px; flex: 0 0 34px; border-radius: 5px 5px 3px 3px; background: {{c.body}}; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25), 0 4px 0 {{c.side}}; display: flex; align-items: flex-start; justify-content: center; padding-top: 4px; box-sizing: border-box">
+              <span style="width: 20px; height: 6px; border-radius: 2px; background: rgba(10,10,10,.55)"></span>
+            </span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1">
+              <span style="font-size: 13px; font-weight: 600">{{c.name}}</span>
+              <span style="font-size: 11.5px; color: #A3A3A3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{c.note}}</span>
+            </span>
+            <span style="font: 400 10.5px 'JetBrains Mono', monospace; color: #D9D9D9">{{c.code}}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #242424; padding-top: 14px">
+        <span class="lbl">Stamps</span>
+        <span style="font-size: 11px; color: #A3A3A3">click to place</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{stamps}}" as="p" hint-placeholder-count="8">
+          <button class="{{p.cls}}" sc-camel-on-click="{{p.pick}}" aria-pressed="{{p.on}}">
+            <svg width="62" height="34" sc-camel-view-box="{{p.vb}}" sc-camel-preserve-aspect-ratio="xMidYMid meet" aria-hidden="true"><path d="{{p.d}}" fill="{{p.fill}}"></path></svg>
+            <span>{{p.name}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </aside>
+
+    <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; height: 844px">
+      <div style="min-height: 44px; display: flex; align-items: center; gap: 18px; padding: 0 14px; border-bottom: 1px solid #242424; background: rgba(12,12,12,0.8); flex-wrap: wrap">
+        <nav aria-label="Benches" style="display: flex; gap: 18px">
+          <a class="tab tab-on" href="Main.dc.html" aria-current="page">Tray · 2D</a>
+          <a class="tab" href="Loom.dc.html">Loom · 1D</a>
+          <a class="tab" href="Terrarium.dc.html">Terrarium · breed</a>
+        </nav>
+        <div role="group" aria-label="Tool" style="display: flex; gap: 2px; padding: 2px; background: rgba(6,6,6,0.88); border: 1px solid #242424; border-radius: 8px; margin-left: auto">
+          <sc-for list="{{tools}}" as="t" hint-placeholder-count="3">
+            <button class="{{t.cls}}" sc-camel-on-click="{{t.pick}}" aria-pressed="{{t.on}}" style="height: 28px; border: 0; font-size: 12px">{{t.name}}</button>
+          </sc-for>
+        </div>
+        <button class="ghost" sc-camel-on-click="{{randomize}}" style="height: 30px">
+          <svg width="13" height="13" sc-camel-view-box="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="1.5" width="11" height="11" rx="2.5"></rect><circle cx="4.7" cy="4.7" r=".9" fill="currentColor"></circle><circle cx="9.3" cy="9.3" r=".9" fill="currentColor"></circle><circle cx="7" cy="7" r=".9" fill="currentColor"></circle></svg>Random soup
+        </button>
+        <button class="ghost" sc-camel-on-click="{{clear}}" style="height: 30px">Clear</button>
+      </div>
+
+      <div class="graph" style="flex: 1 1 auto; position: relative; overflow: hidden" sc-camel-on-mouse-up="{{paintEnd}}" sc-camel-on-mouse-leave="{{paintEnd}}">
+        <div style="position: absolute; left: 50%; top: 0; width: 840px; height: 800px; margin-left: -420px">
+          <div class="floor" style="position: absolute; left: -360px; top: 300px; width: 1560px; height: 760px; transform: perspective(900px) rotateX(62deg); transform-origin: 50% 0"></div>
+          <div style="position: absolute; left: 0; right: 0; top: 286px; height: 30px; background: linear-gradient(rgba(11,12,14,0), rgba(11,12,14,.8))"></div>
+
+          <div style="position: absolute; left: 70px; top: 636px; width: 700px; height: 60px; border-radius: 50%; background: rgba(0,0,0,.7); filter: blur(16px)"></div>
+
+          <div style="position: absolute; left: 6px; top: 66px; width: 828px; height: 562px; transform: {{trayTransform}}; transform-origin: 50% 100%; transition: transform .4s ease">
+            <div style="position: absolute; inset: 0; border-radius: 20px; background-color: #15171A; border: 1.5px solid #2A2D33; box-shadow: 0 22px 0 #0B0C0E, 0 22px 0 1.5px #2A2D33"></div>
+            <span style="position: absolute; left: 22px; top: 12px; font: 500 11px 'JetBrains Mono', monospace; color: #5A5E66; letter-spacing: .1em">PETRI TRAY · 40 × 26 · TORUS</span>
+            <span style="position: absolute; right: 22px; top: 12px; font: 500 11px 'JetBrains Mono', monospace; color: #8A4E7C; letter-spacing: .1em">{{ruleCode}}</span>
+            <span style="position: absolute; left: 10px; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: #2A2D33"></span>
+            <span style="position: absolute; right: 10px; bottom: 10px; width: 6px; height: 6px; border-radius: 50%; background: #2A2D33"></span>
+            <div role="grid" aria-label="Cell tray, 40 by 26. Click or drag to draw." style="position: absolute; left: 35px; top: 36px; display: grid; grid-template-columns: repeat(40, 16px); grid-auto-rows: 16px; gap: 3px">
+              <sc-for list="{{cells}}" as="c" hint-placeholder-count="1040">
+                <button class="{{c.k}}" sc-camel-tab-index="-1" aria-label="cell" sc-camel-on-mouse-down="{{c.down}}" sc-camel-on-mouse-enter="{{c.enter}}"></button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <span class="chip" style="left: 16px; top: 14px">gen {{genStr}} · <span style="color: #F9B3E8">{{pop}} alive</span></span>
+        <span class="chip" style="right: 16px; top: 14px; color: #D9D9D9">{{toolHint}}</span>
+
+        <div style="position: absolute; left: 16px; bottom: 14px; display: flex; gap: 14px; align-items: center; padding: 7px 12px; border-radius: 8px; background: rgba(11,12,14,.9); border: 1px solid #2A2D33; font-size: 12px; color: #D9D9D9; flex-wrap: wrap">
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #FFE6F7; box-shadow: 0 0 8px rgba(255,170,232,.8)"></span>newborn</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #F06BD0"></span>alive</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #B24C9C"></span>elder</span>
+          <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #3B1734"></span>ghost trail</span>
+        </div>
+      </div>
+    </main>
+
+    <aside aria-label="Rule and readouts" style="flex: 1 0 320px; max-width: 360px; border-left: 1px solid #242424; background: rgba(17,17,17,0.84); padding: 16px; display: flex; flex-direction: column; gap: 18px; height: 844px; overflow: auto; box-sizing: border-box">
+      <section aria-label="Rule" style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span class="lbl">Rule</span>
+          <span style="font-size: 12px; color: #A3A3A3">{{ruleName}}</span>
+        </div>
+        <div style="font: 500 30px 'JetBrains Mono', monospace; color: #F9B3E8; letter-spacing: -0.02em">{{ruleCode}}</div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; color: #D9D9D9">Born with</span>
+          <div style="display: flex; gap: 4px">
+            <sc-for list="{{bBits}}" as="b" hint-placeholder-count="9">
+              <button class="{{b.cls}}" sc-camel-on-click="{{b.tap}}" aria-pressed="{{b.on}}" aria-label="{{b.aria}}">{{b.n}}</button>
+            </sc-for>
+          </div>
+          <span style="font-size: 12px; color: #D9D9D9; margin-top: 4px">Survives with</span>
+          <div style="display: flex; gap: 4px">
+            <sc-for list="{{sBits}}" as="b" hint-placeholder-count="9">
+              <button class="{{b.cls}}" sc-camel-on-click="{{b.tap}}" aria-pressed="{{b.on}}" aria-label="{{b.aria}}">{{b.n}}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #A3A3A3">
+          <svg width="40" height="40" sc-camel-view-box="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="14.5" y="1" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="28" y="1" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="1" y="14.5" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="14.5" y="14.5" width="11" height="11" rx="2" fill="#F06BD0"></rect><rect x="28" y="14.5" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="1" y="28" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="14.5" y="28" width="11" height="11" rx="2" fill="#2A1A26"></rect><rect x="28" y="28" width="11" height="11" rx="2" fill="#2A1A26"></rect></svg>
+          8 neighbours · edges wrap
+        </div>
+      </section>
+
+      <section aria-label="Speed and look" style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #242424; padding-top: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <label for="spd" class="lbl">Speed</label>
+          <span style="font: 400 12px 'JetBrains Mono', monospace; color: #D9D9D9">{{speed}} gen/s</span>
+        </div>
+        <input id="spd" type="range" min="1" max="30" step="1" value="{{speed}}" sc-camel-on-change="{{setSpeed}}">
+        <div style="display: flex; gap: 6px; flex-wrap: wrap">
+          <button class="{{trailCls}}" sc-camel-on-click="{{toggleTrails}}" aria-pressed="{{trails}}">Ghost trails</button>
+          <button class="{{flatCls}}" sc-camel-on-click="{{toggleFlat}}" aria-pressed="{{flat}}">Top-down view</button>
+        </div>
+      </section>
+
+      <section aria-label="Population" style="display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #242424; padding-top: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span class="lbl">Population</span>
+          <span style="font-size: 12px; color: #A3A3A3">last 120 gens</span>
+        </div>
+        <svg width="100%" height="84" sc-camel-view-box="0 0 288 84" sc-camel-preserve-aspect-ratio="none" role="img" aria-label="Population over the last 120 generations" style="background: #0B0C0E; border: 1px solid #242424; border-radius: 8px">
+          <path d="M0 21H288M0 42H288M0 63H288" stroke="rgba(255,255,255,.05)"></path>
+          <path d="{{sparkFill}}" fill="rgba(240,107,208,.14)"></path>
+          <path d="{{spark}}" fill="none" stroke="#F06BD0" stroke-width="1.6" stroke-linejoin="round"></path>
+        </svg>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <sc-for list="{{stats}}" as="st" hint-placeholder-count="4">
+            <div style="border: 1px solid #242424; border-radius: 8px; padding: 8px 10px; background: #111111; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 11px; color: #A3A3A3">{{st.k}}</span>
+              <span style="font: 500 18px 'JetBrains Mono', monospace; color: {{st.c}}">{{st.v}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="What is happening" style="display: flex; flex-direction: column; gap: 8px; border: 1px solid #6B2A5C; background: #1A0E17; border-radius: 10px; padding: 12px 14px">
+        <span style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #F9B3E8"><span class="pulse" style="width: 7px; height: 7px; border-radius: 50%; background: #F06BD0"></span>{{moodTitle}}</span>
+        <span style="font-size: 12.5px; line-height: 1.55; color: #D9D9D9">{{moodText}}</span>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;tilt&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:44,&quot;min&quot;:0,&quot;max&quot;:60,&quot;step&quot;:1,&quot;unit&quot;:&quot;°&quot;,&quot;section&quot;:&quot;Bench&quot;},&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  constructor(...a) {
+    super(...a);
+    this.W = 40; this.H = 26;
+    this.P = {
+      glider: ['.O.', '..O', 'OOO'],
+      lwss: ['.O..O', 'O....', 'O...O', 'OOOO.'],
+      rpent: ['.OO', 'OO.', '.O.'],
+      acorn: ['.O.....', '...O...', 'OO..OOO'],
+      pulsar: ['..OOO...OOO..', '.............', 'O....O.O....O', 'O....O.O....O', 'O....O.O....O', '..OOO...OOO..', '.............', '..OOO...OOO..', 'O....O.O....O', 'O....O.O....O', 'O....O.O....O', '.............', '..OOO...OOO..'],
+      penta: ['..O....O..', 'OO.OOOO.OO', '..O....O..'],
+      gun: ['........................O', '......................O.O', '............OO......OO............OO', '...........O...O....OO............OO', 'OO........O.....O...OO', 'OO........O...O.OO....O.O', '..........O.....O.......O', '...........O...O', '............OO'],
+      rep: ['..OOO', '.O..O', 'O...O', 'O..O.', 'OOO..']
+    };
+    this.stampList = [
+      { id: 'glider', name: 'Glider' }, { id: 'lwss', name: 'Spaceship' }, { id: 'pulsar', name: 'Pulsar' }, { id: 'penta', name: 'Pentadecathlon' },
+      { id: 'rpent', name: 'R-pentomino' }, { id: 'acorn', name: 'Acorn' }, { id: 'gun', name: 'Glider gun' }, { id: 'rep', name: 'Replicator' }
+    ];
+    this.cartList = [
+      { id: 'life', name: 'Life', note: 'The classic', b: [3], s: [2, 3], body: '#F06BD0' },
+      { id: 'high', name: 'HighLife', note: 'Has a replicator', b: [3, 6], s: [2, 3], body: '#F3DC6B' },
+      { id: 'seeds', name: 'Seeds', note: 'Explodes', b: [2], s: [], body: '#FF8E7A' },
+      { id: 'dn', name: 'Day & Night', note: 'Light–dark symmetric', b: [3, 6, 7, 8], s: [3, 4, 6, 7, 8], body: '#B79CFF' },
+      { id: 'maze', name: 'Maze', note: 'Grows corridors', b: [3], s: [1, 2, 3, 4, 5], body: '#4BE3A0' },
+      { id: 'coral', name: 'Coral', note: 'Slow reef', b: [3], s: [4, 5, 6, 7, 8], body: '#6CCBF5' }
+    ];
+    const z = this.seed();
+    this.state = Object.assign(z, { running: true, speed: 10, trails: true, flat: false, tool: 'draw', stamp: 'glider', cart: 'life', b: [3], s: [2, 3] });
+    this.painting = false; this.paintVal = 1; this.last = 0;
+  }
+  blank() { return { cells: new Array(this.W * this.H).fill(0), trail: new Array(this.W * this.H).fill(0) }; }
+  place(cells, id, cx, cy, center) {
+    const rows = this.P[id];
+    const w = Math.max(...rows.map((r) => r.length)), h = rows.length;
+    const ox = center ? cx - Math.floor(w / 2) : cx, oy = center ? cy - Math.floor(h / 2) : cy;
+    rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === 'O') { const X = (ox + x + this.W) % this.W, Y = (oy + y + this.H) % this.H; cells[Y * this.W + X] = 1; } });
+  }
+  seed() {
+    const z = this.blank();
+    this.place(z.cells, 'gun', 1, 1, false);
+    this.place(z.cells, 'pulsar', 26, 12, false);
+    const pop = z.cells.filter((v) => v).length;
+    return Object.assign(z, { gen: 0, hist: [pop], born: 0, died: 0 });
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      const now = Date.now();
+      if (this.state.running && now - this.last >= 1000 / this.state.speed) { this.last = now; this.advance(); }
+    }, 30);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  advance() {
+    const { cells, trail, b, s } = this.state, W = this.W, H = this.H;
+    const nc = new Array(W * H), nt = new Array(W * H);
+    let born = 0, died = 0, pop = 0;
+    for (let y = 0; y < H; y++) {
+      const ym = ((y + H - 1) % H) * W, y0 = y * W, yp = ((y + 1) % H) * W;
+      for (let x = 0; x < W; x++) {
+        const xm = (x + W - 1) % W, xp = (x + 1) % W;
+        const n = (cells[ym + xm] ? 1 : 0) + (cells[ym + x] ? 1 : 0) + (cells[ym + xp] ? 1 : 0) + (cells[y0 + xm] ? 1 : 0) + (cells[y0 + xp] ? 1 : 0) + (cells[yp + xm] ? 1 : 0) + (cells[yp + x] ? 1 : 0) + (cells[yp + xp] ? 1 : 0);
+        const i = y0 + x, a = cells[i];
+        let v = 0;
+        if (a) { v = s.indexOf(n) >= 0 ? a + 1 : 0; if (!v) died++; } else if (b.indexOf(n) >= 0) { v = 1; born++; }
+        nc[i] = v; if (v) pop++;
+        nt[i] = v ? 0 : (a ? 3 : Math.max(0, trail[i] - 1));
+      }
+    }
+    const hist = this.state.hist.concat([pop]).slice(-120);
+    this.setState({ cells: nc, trail: nt, gen: this.state.gen + 1, hist, born, died });
+  }
+  edit(i) {
+    const cells = this.state.cells.slice();
+    if (this.state.tool === 'stamp') { this.place(cells, this.state.stamp, i % this.W, Math.floor(i / this.W), true); }
+    else cells[i] = this.paintVal;
+    const hist = this.state.hist.slice(0, -1).concat([cells.filter((v) => v).length]);
+    this.setState({ cells, hist });
+  }
+  paintStart(i) {
+    if (this.state.tool === 'stamp') { this.edit(i); return; }
+    this.paintVal = this.state.tool === 'erase' ? 0 : (this.state.cells[i] ? 0 : 1);
+    this.painting = true; this.edit(i);
+  }
+  paintMove(i) { if (this.painting && this.state.tool !== 'stamp') this.edit(i); }
+  renderVals() {
+    const st = this.state;
+    const tilt = this.props.tilt ?? 44;
+    const cells = st.cells.map((a, i) => ({
+      k: a ? (a === 1 ? 'cell cn' : a > 10 ? 'cell co' : 'cell ca') : (st.trails && st.trail[i] ? 'cell t' + st.trail[i] : 'cell'),
+      down: () => this.paintStart(i), enter: () => this.paintMove(i)
+    }));
+    const code = 'B' + st.b.slice().sort().join('') + '/S' + st.s.slice().sort().join('');
+    const match = this.cartList.find((c) => c.b.slice().sort().join('') === st.b.slice().sort().join('') && c.s.slice().sort().join('') === st.s.slice().sort().join(''));
+    const shade = (h) => { const v = [1, 3, 5].map((k) => Math.round(parseInt(h.slice(k, k + 2), 16) * 0.45)); return '#' + v.map((n) => n.toString(16).padStart(2, '0')).join(''); };
+    const carts = this.cartList.map((c) => {
+      const on = !!match && match.id === c.id;
+      return { name: c.name, note: c.note, on, cls: on ? 'cart cart-on' : 'cart', body: c.body, side: shade(c.body), code: 'B' + c.b.join('') + '/S' + c.s.join(''), pick: () => this.setState({ b: c.b.slice(), s: c.s.slice(), cart: c.id }) };
+    });
+    const stamps = this.stampList.map((p) => {
+      const rows = this.P[p.id];
+      const w = Math.max(...rows.map((r) => r.length)), h = rows.length;
+      let d = '';
+      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === 'O') d += 'M' + (x * 5) + ' ' + (y * 5) + 'h4v4h-4z'; });
+      const on = st.tool === 'stamp' && st.stamp === p.id;
+      const pad = 3, vw = Math.max(w * 5, 18), vh = Math.max(h * 5, 12);
+      return { name: p.name, d, on, cls: on ? 'stamp stamp-on' : 'stamp', fill: on ? '#F06BD0' : '#D9D9D9', vb: (-pad - (vw - w * 5) / 2) + ' ' + (-pad - (vh - h * 5) / 2) + ' ' + (vw + pad * 2) + ' ' + (vh + pad * 2), pick: () => this.setState({ tool: 'stamp', stamp: p.id }) };
+    });
+    const tools = [['draw', 'Draw'], ['erase', 'Erase'], ['stamp', 'Stamp']].map(([id, name]) => ({ name, on: st.tool === id, cls: st.tool === id ? 'seg seg-on' : 'seg', pick: () => this.setState({ tool: id }) }));
+    const bits = (key) => [0, 1, 2, 3, 4, 5, 6, 7, 8].map((n) => {
+      const on = st[key].indexOf(n) >= 0;
+      return { n, on, cls: on ? 'bit bit-on' : 'bit', aria: (key === 'b' ? 'Born with ' : 'Survives with ') + n, tap: () => { const arr = on ? st[key].filter((v) => v !== n) : st[key].concat([n]); this.setState({ [key]: arr.sort() }); } };
+    });
+    const hist = st.hist, pop = hist[hist.length - 1];
+    const mx = Math.max(10, ...hist);
+    const X = (i) => (hist.length < 2 ? 0 : (i / 119) * 288 + (288 - ((hist.length - 1) / 119) * 288));
+    const Y = (v) => (80 - (v / mx) * 72).toFixed(1);
+    const spark = hist.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v)).join(' ');
+    const sparkFill = hist.length > 1 ? spark + ' L' + X(hist.length - 1).toFixed(1) + ' 84 L' + X(0).toFixed(1) + ' 84 Z' : '';
+    const last = hist.slice(-16);
+    let moodTitle = 'Churning', moodText = 'Births and deaths are balanced.';
+    const growth = hist.length > 20 ? (pop - hist[hist.length - 21]) / Math.max(1, hist[hist.length - 21]) : 0;
+    const p2 = last.length >= 12 && last.every((v, i) => i < 2 || v === last[i - 2]);
+    if (pop === 0) { moodTitle = 'Extinct'; moodText = 'Everything died. Stamp or draw to restart.'; }
+    else if (last.length >= 12 && last.every((v) => v === last[0])) { moodTitle = 'Settled'; moodText = 'Only still lifes left. Try hitting one with a glider.'; }
+    else if (p2) { moodTitle = 'Oscillating'; moodText = 'Repeating the same few states.'; }
+    else if (growth > 0.35) { moodTitle = 'Booming'; moodText = 'Births are far outpacing deaths.'; }
+    else if (growth < -0.3) { moodTitle = 'Collapsing'; moodText = 'Population is falling fast.'; }
+    const toolHint = st.tool === 'stamp' ? 'Click to place ' + this.stampList.find((p) => p.id === st.stamp).name : st.tool === 'erase' ? 'Drag to erase' : 'Click or drag to draw';
+    return {
+      cells, carts, stamps, tools, bBits: bits('b'), sBits: bits('s'),
+      ruleCode: code, ruleName: match ? match.name : 'Custom rule',
+      running: st.running, paused: !st.running,
+      genStr: String(st.gen).padStart(4, '0'), pop,
+      speed: st.speed, trails: st.trails, flat: st.flat,
+      trailCls: st.trails ? 'tog tog-on' : 'tog', flatCls: st.flat ? 'tog tog-on' : 'tog',
+      trayTransform: st.flat ? 'perspective(1600px) rotateX(0deg) scale(0.9)' : 'perspective(1600px) rotateX(' + tilt + 'deg) scale(0.96)',
+      spark, sparkFill, moodTitle, moodText, toolHint,
+      stats: [
+        { k: 'Generation', v: st.gen, c: '#EAEAEA' }, { k: 'Alive', v: pop, c: '#F9B3E8' },
+        { k: 'Born', v: st.born, c: '#FFE6F7' }, { k: 'Died', v: st.died, c: '#A3A3A3' }
+      ],
+      toggleRun: () => this.setState({ running: !st.running }),
+      stepOnce: () => { this.setState({ running: false }); this.advance(); },
+      restart: () => this.setState(Object.assign(this.seed(), { b: [3], s: [2, 3], cart: 'life' })),
+      clear: () => this.setState(Object.assign(this.blank(), { hist: [0], gen: 0, born: 0, died: 0 })),
+      randomize: () => { const z = this.blank(); z.cells = z.cells.map(() => (Math.random() < 0.3 ? 1 : 0)); this.setState(Object.assign(z, { hist: [z.cells.filter((v) => v).length], gen: 0, born: 0, died: 0 })); },
+      setSpeed: (e) => this.setState({ speed: Number(e.target.value) }),
+      toggleTrails: () => this.setState({ trails: !st.trails }),
+      toggleFlat: () => this.setState({ flat: !st.flat }),
+      paintEnd: () => { this.painting = false; }
+    };
+  }
+}
+</script>
+
+
+</body></html>
