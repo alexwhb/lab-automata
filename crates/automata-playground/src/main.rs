@@ -17,5 +17,10 @@ fn main() -> eframe::Result<()> {
             }
         }
     }
-    automata_playground::run()
+    // `--no-mcp`: no live MCP bridge (also `AUTOMATA_MCP_SOCKET=off`)
+    let mut opts = automata_playground::AppOptions::default();
+    if args.iter().any(|a| a == "--no-mcp") {
+        opts.mcp_socket = None;
+    }
+    automata_playground::run_with(opts)
 }

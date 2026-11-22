@@ -21,8 +21,11 @@ ap-engine = { workspace = true }
 ap-bench = { workspace = true }
 lab-theme = { workspace = true }
 lab-ui = { workspace = true }
+lab-mcp = { workspace = true, features = ["png"] }
+ap-shared = { workspace = true }
 eframe = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }
 env_logger = "0.11"

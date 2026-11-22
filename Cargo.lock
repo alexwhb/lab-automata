@@ -502,16 +502,19 @@ dependencies = [
  "anyhow",
  "ap-bench",
  "ap-engine",
+ "ap-shared",
  "ap-theme",
  "eframe",
  "egui_kittest",
  "env_logger",
  "image",
+ "lab-mcp",
  "lab-theme",
  "lab-ui",
  "log",
  "rfd",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1683,6 +1686,7 @@ name = "lab-mcp"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "image",
  "libc",
  "log",
  "serde",

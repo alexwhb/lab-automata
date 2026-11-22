@@ -7,6 +7,7 @@
 //! documented on [`screens::Screen`] and in `docs/ARCHITECTURE.md`.
 
 pub mod app;
+pub mod control;
 pub mod ctx;
 pub mod launcher;
 pub mod layout;
@@ -51,11 +52,16 @@ pub fn native_options() -> eframe::NativeOptions {
     }
 }
 
-/// Runs the app.
+/// Runs the app (with the MCP bridge on its default socket).
 pub fn run() -> eframe::Result<()> {
+    run_with(AppOptions::default())
+}
+
+/// Runs the app with `opts`.
+pub fn run_with(opts: AppOptions) -> eframe::Result<()> {
     eframe::run_native(
         APP_NAME,
         native_options(),
-        Box::new(|cc| Ok(Box::new(AutomataApp::new(cc, AppOptions::default())))),
+        Box::new(|cc| Ok(Box::new(AutomataApp::new(cc, opts)))),
     )
 }

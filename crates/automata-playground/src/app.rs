@@ -29,7 +29,8 @@ pub struct AppOptions {
     pub launcher: Launcher,
     /// Restore the last route and bench from eframe storage.
     pub load_persisted: bool,
-    /// Where the live MCP bridge listens (`None`: no bridge). Reserved for the MCP work.
+    /// Where the live MCP bridge listens (`None`: no bridge; see `control.rs`). The real app
+    /// listens on [`crate::control::default_socket_path`]; tests pass their own temp socket.
     pub mcp_socket: Option<PathBuf>,
 }
 
@@ -50,7 +51,7 @@ impl Default for AppOptions {
             save_dialog: true,
             launcher: Launcher::system(),
             load_persisted: true,
-            mcp_socket: None,
+            mcp_socket: crate::control::default_socket_path(),
         }
     }
 }
@@ -110,6 +111,8 @@ pub struct AutomataApp {
     header_height: f32,
     /// The options it was started with (the MCP bridge reads `mcp_socket`).
     pub options: AppOptions,
+    /// The live MCP bridge (owned by `control.rs`).
+    pub(crate) control: crate::control::Control,
 }
 
 impl AutomataApp {
@@ -150,6 +153,7 @@ impl AutomataApp {
             pending_carry: None,
             content_height: 0.0,
             header_height: 0.0,
+            control: crate::control::Control::start(opts.mcp_socket.as_deref()),
             options: opts,
         }
     }
@@ -268,8 +272,19 @@ impl AutomataApp {
         )
     }
 
+    /// Runs `route`'s [`Screen::enter`](crate::Screen::enter) now, whether or not it is
+    /// showing: the MCP bridge calls it before driving a screen in the background, so the
+    /// screen's first-visit set-up doesn't undo the change later. Screens' `enter` is safe to
+    /// call again.
+    pub(crate) fn enter_screen(&mut self, route: Route, egui_ctx: &egui::Context) {
+        let body_h = (egui_ctx.content_rect().height() - self.header_height).max(0.0);
+        let (mut ctx, screens) = self.ctx(egui_ctx, body_h);
+        screens.get(route).enter(&mut ctx);
+    }
+
     /// One frame of the whole app (also called directly by tests).
     pub fn frame(&mut self, ui: &mut Ui) {
+        crate::control::poll(self, ui);
         let egui_ctx = ui.ctx().clone();
         let full = ui.max_rect();
         let body_h = (full.height() - self.header_height).max(0.0);
@@ -371,6 +386,11 @@ fn commands(ctx: &egui::Context) -> Vec<Command> {
 }
 
 impl eframe::App for AutomataApp {
+    /// Runs even while the window is hidden; lets the MCP bridge ask for a frame (`control.rs`).
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        crate::control::logic(self, ctx);
+    }
+
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.frame(ui);
     }
