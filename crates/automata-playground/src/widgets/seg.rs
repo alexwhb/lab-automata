@@ -10,7 +10,7 @@ use eframe::egui::{
     Color32, CornerRadius, Rect, Response, Stroke, StrokeKind, Ui, UiBuilder, accesskit::Role,
     pos2, vec2,
 };
-use lab_ui::paint::{advance_block, focus_ring_if};
+use lab_ui::paint::focus_ring_if;
 
 /// The look of a [`SegGroup`].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -359,7 +359,7 @@ impl<'a> SegGroup<'a> {
             items.push(resp);
         }
         let response = group.response();
-        advance_block(ui, well);
+        ui.advance_cursor_after_rect(well);
         SegResponse {
             clicked,
             response,

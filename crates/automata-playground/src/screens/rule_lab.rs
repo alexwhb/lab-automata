@@ -38,8 +38,8 @@ use ap_engine::{
 };
 use ap_theme as t;
 use eframe::egui::{
-    Align, Color32, FontId, Galley, Id, Layout, Rect, Sense, Ui, UiBuilder, Vec2, WidgetInfo,
-    accesskit::Role, pos2, vec2,
+    Align, Color32, FontId, Galley, Id, Layout, Rect, Sense, Ui, Vec2, WidgetInfo, accesskit::Role,
+    pos2, vec2,
 };
 use model::Lab;
 use std::sync::Arc;
@@ -369,15 +369,15 @@ impl State {
     fn spec_aside(&mut self, ui: &mut Ui) {
         lbl(ui, "Rule spec");
         self.family(ui);
-        group(ui, "Neighbourhood", |ui| {
-            Card::panel().show(ui, |ui| self.neighbourhood(ui));
-        });
-        group(ui, "Birth and survival", |ui| {
-            Card::panel().show(ui, |ui| self.bits(ui));
-        });
-        group(ui, "Boundary and seed", |ui| {
-            Card::panel().show(ui, |ui| self.boundary_and_seed(ui));
-        });
+        Card::panel()
+            .label("Neighbourhood")
+            .show(ui, |ui| self.neighbourhood(ui));
+        Card::panel()
+            .label("Birth and survival")
+            .show(ui, |ui| self.bits(ui));
+        Card::panel()
+            .label("Boundary and seed")
+            .show(ui, |ui| self.boundary_and_seed(ui));
     }
 
     fn family(&mut self, ui: &mut Ui) {
@@ -447,7 +447,6 @@ impl State {
                 s.rule.toggle_birth(b);
             });
         }
-        gap(ui);
         caption(ui, "Survives with");
         if let Some(b) = BitRow::new("Survives with", n + 1, rule.survive().bits())
             .lab()
@@ -470,7 +469,6 @@ impl State {
         {
             self.change_spec(|s| s.boundary = Boundary::ALL[i]);
         }
-        gap(ui);
         caption(ui, "Seed");
         let current = match spec.seed {
             Seed::RPentomino => 0,
@@ -493,9 +491,10 @@ impl State {
     fn run_column(&mut self, ui: &mut Ui) {
         self.run_header(ui);
         self.well(ui);
-        group(ui, "Playback and population", |ui| {
-            Card::panel().gap(8.0).show(ui, |ui| self.playback(ui));
-        });
+        Card::panel()
+            .gap(8.0)
+            .label("Playback and population")
+            .show(ui, |ui| self.playback(ui));
     }
 
     /// `B3/S23  Moore r1 · wraps at edges  ……  gen 120 / 400 · 148 alive`.
@@ -597,9 +596,7 @@ impl State {
             .collect();
         let report = self.lab.report();
         let label = format!("Population across {gens} generations");
-        // the svg's 120 px plus its 1 px border
         let resp = Plot::series(&pops)
-            .height(122.0)
             .stable_from(report.first_repeat.map(|r| r.start))
             .playhead(Some(self.lab.generation()))
             .label(&label)
@@ -707,23 +704,6 @@ impl State {
 }
 
 // ---- small helpers --------------------------------------------------------------------------
-
-/// An AccessKit group around a card (`<section aria-label>`), keeping the column's gap after
-/// it.
-fn group(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
-    let builder = UiBuilder::new()
-        .accessibility_role(Role::Group)
-        .accessibility_label(label);
-    ui.scope_builder(builder, |ui| {
-        add(ui);
-        crate::widgets::set_bounds(ui, ui.min_rect());
-    });
-}
-
-/// The parent's gap after a packed widget (bit rows and segmented wells advance without it).
-fn gap(ui: &mut Ui) {
-    ui.add_space(ui.spacing().item_spacing.y);
-}
 
 /// A 12 px `#D9D9D9` caption ("Family", "Born with", …).
 fn caption(ui: &mut Ui, text: &str) {

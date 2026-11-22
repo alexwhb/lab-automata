@@ -111,7 +111,7 @@ impl State {
             ui.scope(|ui| {
                 ui.spacing_mut().item_spacing.y = 6.0;
                 css_text(ui, "Born with", lab_theme::font::body(12.0), t::TEXT_DIM);
-                if let Some(n) = bit_row(ui, "Born with", rule.birth().bits()) {
+                if let Some(n) = BitRow::new("Born with", BITS, rule.birth().bits()).show(ui) {
                     let mut r = rule;
                     r.toggle_birth(n);
                     new_rule = Some(r);
@@ -123,7 +123,8 @@ impl State {
                     lab_theme::font::body(12.0),
                     t::TEXT_DIM,
                 );
-                if let Some(n) = bit_row(ui, "Survives with", rule.survive().bits()) {
+                if let Some(n) = BitRow::new("Survives with", BITS, rule.survive().bits()).show(ui)
+                {
                     let mut r = rule;
                     r.toggle_survive(n);
                     new_rule = Some(r);
@@ -301,24 +302,6 @@ fn big_code(ui: &mut Ui, code: &str) {
     paint_line(ui.painter(), &g, rect.left(), rect.top(), h, t::INK);
     let s = code.to_string();
     resp.widget_info(|| WidgetInfo::labeled(Role::Label, true, &s));
-}
-
-/// A Tray bit row (`BitRow`), laid out as CSS does: the on-bits' 3 px drop is a box-shadow,
-/// so the row takes 30 px.
-fn bit_row(ui: &mut Ui, prefix: &str, mask: u32) -> Option<usize> {
-    let origin = ui.cursor().min;
-    let width = ui.available_width();
-    let mut child = ui.new_child(
-        UiBuilder::new()
-            .max_rect(Rect::from_min_size(
-                origin,
-                vec2(width, t::size::BIT_H + 3.0),
-            ))
-            .layout(eframe::egui::Layout::top_down(eframe::egui::Align::Min)),
-    );
-    let clicked = BitRow::new(prefix, BITS, mask).show(&mut child);
-    ui.advance_cursor_after_rect(Rect::from_min_size(origin, vec2(width, t::size::BIT_H)));
-    clicked
 }
 
 /// The 40 px Moore glyph and "8 neighbours · edges wrap" (`gap: 6px`, 12 px muted).

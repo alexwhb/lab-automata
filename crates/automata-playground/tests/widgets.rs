@@ -268,3 +268,71 @@ fn widget_gallery_snapshot() {
     let _ = img.save(dir.join("widget-gallery.png"));
     h.snapshot("widget-gallery");
 }
+
+/// A column's `gap` works like CSS `gap` after every block widget: the next item starts
+/// exactly one gap below the widget's layout box (none swallows it, none adds its own), and
+/// box-shadow-like extras (the Tray bits' 3 px drop) stay out of the layout box.
+#[test]
+fn block_widgets_keep_the_column_gap() {
+    use automata_playground::widgets::{
+        BitRow, Callout, Card, NbGrid, SegGroup, SegItem, SegStyle,
+    };
+    const GAP: f32 = 14.0;
+    let items = [SegItem::new("Torus"), SegItem::new("Dead edge")];
+    let ctx = egui::Context::default();
+    ap_theme::install(&ctx);
+    let input = || egui::RawInput {
+        screen_rect: Some(egui::Rect::from_min_size(
+            egui::Pos2::ZERO,
+            egui::vec2(320.0, 1200.0),
+        )),
+        ..Default::default()
+    };
+    let mut measured: Vec<(&str, f32, f32)> = Vec::new();
+    for _ in 0..2 {
+        measured.clear();
+        let mut out = ctx.run_ui(input(), |ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(GAP, GAP);
+            let mut block =
+                |name: &'static str, ui: &mut egui::Ui, add: &mut dyn FnMut(&mut egui::Ui)| {
+                    let top = ui.cursor().top();
+                    add(ui);
+                    let bottom = ui.min_rect().bottom();
+                    measured.push((name, bottom - top, ui.cursor().top() - bottom));
+                };
+            block("BitRow", ui, &mut |ui| {
+                BitRow::new("Born with", 9, 0b1000).show(ui);
+            });
+            block("BitRow::lab", ui, &mut |ui| {
+                BitRow::new("Survives with", 9, 0b1100).lab().show(ui);
+            });
+            block("NbGrid", ui, &mut |ui| {
+                NbGrid::new(0).show(ui);
+            });
+            block("SegGroup", ui, &mut |ui| {
+                SegGroup::new("Boundary", &items, Some(0))
+                    .style(SegStyle::Mini { fill: true })
+                    .show(ui);
+            });
+            block("Card::label", ui, &mut |ui| {
+                Card::panel().label("Card").show(ui, |ui| ui.label("x"));
+            });
+            block("Callout", ui, &mut |ui| {
+                Callout::new("Churning", "Births and deaths are balanced.").show(ui);
+            });
+        });
+        out.textures_delta.clear();
+    }
+    for (name, height, gap) in &measured {
+        assert_eq!(*gap, GAP, "{name}: gap after it");
+        assert!(*height > 0.0, "{name}: empty box");
+    }
+    let height = |n: &str| measured.iter().find(|m| m.0 == n).map(|m| m.1).unwrap();
+    assert_eq!(
+        height("BitRow"),
+        30.0,
+        "Tray bits: 30 px, the drop is a box-shadow"
+    );
+    assert_eq!(height("BitRow::lab"), 26.0);
+    assert_eq!(height("NbGrid"), 5.0 * 30.0 + 4.0 * 3.0);
+}

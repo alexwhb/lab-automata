@@ -9,7 +9,7 @@ use eframe::egui::{
     CornerRadius, Id, Rect, Response, Stroke, StrokeKind, Ui, UiBuilder, accesskit::Role, pos2,
     vec2,
 };
-use lab_ui::paint::{advance_block, focus_ring_if};
+use lab_ui::paint::focus_ring_if;
 
 /// One `.bit`: a mono number that toggles. Tray look by default; [`Bit::lab`] for the Rule
 /// lab's 26 × 26 variant. AccessKit: a toggle `Button` named e.g. "Born with 3".
@@ -180,9 +180,8 @@ impl<'a> BitRow<'a> {
                 clicked = Some(n);
             }
         }
-        // the Tray's 3 px drop hangs below the row
-        let extra = if self.lab { 0.0 } else { 3.0 };
-        advance_block(ui, used.with_max_y(used.bottom() + extra));
+        // the Tray's 3 px drop is a `box-shadow`: it hangs into the gap below, outside layout
+        ui.advance_cursor_after_rect(used);
         clicked
     }
 }
@@ -273,7 +272,7 @@ impl NbGrid {
                 clicked = Some((x, y));
             }
         }
-        advance_block(ui, used);
+        ui.advance_cursor_after_rect(used);
         clicked
     }
 }

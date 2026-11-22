@@ -7,7 +7,9 @@
 //! - [`Plot::series`] (Rule lab, 120 px): values spread over the width;
 //!   `y = h − 6 − v / max · (h − 16)`.
 //!
-//! `max` is `max(10, values…)` like the mockup.
+//! `max` is `max(10, values…)` like the mockup. The height is the `<svg height>` (its content
+//! box): the widget is 2 px taller for the svg's `border: 1px`, and the view box maps into
+//! the content box inside the border.
 
 use ap_theme as t;
 use eframe::egui::{
@@ -58,7 +60,7 @@ impl<'a> Plot<'a> {
         }
     }
 
-    /// Another height (px).
+    /// Another content height (px, the `<svg height>`; the border adds 2).
     pub fn height(mut self, h: f32) -> Self {
         self.height = h;
         self
@@ -79,7 +81,7 @@ impl<'a> Plot<'a> {
         self
     }
 
-    /// The x of value `i` in `rect`.
+    /// The x of value `i` in the content box `rect`.
     pub fn x_of(&self, rect: Rect, i: usize) -> f32 {
         let w = rect.width();
         match self.capacity {
@@ -95,7 +97,7 @@ impl<'a> Plot<'a> {
         }
     }
 
-    /// The y of value `v` in `rect`.
+    /// The y of value `v` in the content box `rect`.
     pub fn y_of(&self, rect: Rect, v: f32) -> f32 {
         let max = self.max();
         rect.bottom() - self.bottom - v / max * (rect.height() - self.bottom - self.top)
@@ -108,21 +110,22 @@ impl<'a> Plot<'a> {
     /// Draws the plot full width at the cursor. AccessKit: an `Image` named by the label.
     pub fn show(self, ui: &mut Ui) -> Response {
         let w = ui.available_width();
-        let (rect, resp) = ui.allocate_exact_size(vec2(w, self.height), Sense::hover());
+        let (rect, resp) = ui.allocate_exact_size(vec2(w, self.height + 2.0), Sense::hover());
         self.paint(ui.painter(), rect);
         let label = self.label.to_string();
         resp.widget_info(|| WidgetInfo::labeled(Role::Image, true, &label));
         resp
     }
 
-    /// Paints the plot into `rect`.
-    pub fn paint(&self, painter: &Painter, rect: Rect) {
+    /// Paints the plot into `outer` (border box: the view box maps into it minus the border).
+    pub fn paint(&self, painter: &Painter, outer: Rect) {
         let radius = CornerRadius::same(t::radius::WELL);
-        painter.rect_filled(rect, radius, t::PLOT_BG);
-        let inner = rect.shrink(1.0);
-        let clip = painter.with_clip_rect(inner.intersect(painter.clip_rect()));
+        painter.rect_filled(outer, radius, t::PLOT_BG);
+        let rect = outer.shrink(1.0);
+        let clip = painter.with_clip_rect(rect.intersect(painter.clip_rect()));
         for k in 1..=3 {
-            let y = (rect.top() + rect.height() * k as f32 / 4.0).round() - 0.5;
+            // `M0 21H288…`: a 1 px stroke centred on the view-box line, as Chrome draws it
+            let y = rect.top() + rect.height() * k as f32 / 4.0;
             clip.hline(rect.x_range(), y, Stroke::new(1.0, t::PLOT_GUIDE));
         }
         if let Some(from) = self.band_from
@@ -161,7 +164,7 @@ impl<'a> Plot<'a> {
             clip.vline(x, rect.y_range(), Stroke::new(1.5, t::PLAYHEAD));
         }
         painter.rect_stroke(
-            rect,
+            outer,
             radius,
             Stroke::new(1.0, t::BORDER),
             StrokeKind::Inside,

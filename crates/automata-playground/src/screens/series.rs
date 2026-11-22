@@ -20,7 +20,7 @@ use eframe::egui::{
     UiBuilder, WidgetInfo, accesskit::Role, epaint::Shadow, pos2, vec2,
 };
 use lab_ui::layout::{auto_fit, column_width};
-use lab_ui::paint::{advance_block, focus_ring_if};
+use lab_ui::paint::focus_ring_if;
 
 /// The Series screen's state.
 #[derive(Debug, Default)]
@@ -63,11 +63,9 @@ impl Screen for State {
             .show(ui, |ui| {
                 ui.set_width(width - 2.0 * pad_x);
                 // `flex-direction: column; gap: 24px`
-                ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                ui.spacing_mut().item_spacing = vec2(0.0, 24.0);
                 intro(ui);
-                ui.add_space(24.0);
                 self.identities(ctx, ui);
-                ui.add_space(24.0);
                 lower_row(ui);
             });
     }
@@ -160,7 +158,7 @@ impl State {
         }
         let used = Rect::from_min_max(origin, pos2(origin.x + width, bottom));
         crate::widgets::set_bounds(&sec, used);
-        advance_block(ui, used);
+        ui.advance_cursor_after_rect(used);
     }
 
     /// One identity card at `rect.min`, `rect.width()` wide; returns the rect used.
@@ -430,10 +428,10 @@ fn lower_row(ui: &mut Ui) {
         ui.data_mut(|d| d.insert_temp(row_id, heights));
         ui.ctx().request_discard("series card heights changed");
     }
-    advance_block(
-        ui,
-        Rect::from_min_max(origin, pos2(origin.x + width, row_bottom)),
-    );
+    ui.advance_cursor_after_rect(Rect::from_min_max(
+        origin,
+        pos2(origin.x + width, row_bottom),
+    ));
 }
 
 /// Draws lower card `i` at `rect` (min height `rect.height()`); returns (natural height, rect).

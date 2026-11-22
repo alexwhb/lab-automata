@@ -1,7 +1,7 @@
 //! Frames and readouts: `.card`, stat tiles, the "what is happening" callout with its pulsing
 //! dot, the Rule lab's verdict box, the pinned `.chip` and `.code` blocks.
 
-use super::text::{galley, text_top, wrapped, wrapped_job};
+use super::text::{css_line_height, galley, paint_line, text_top, wrapped, wrapped_job};
 use ap_theme as t;
 use eframe::egui::{
     Align2, Color32, CornerRadius, Frame, InnerResponse, Margin, Pos2, Rect, Response, Sense,
@@ -110,7 +110,7 @@ impl Card {
                 let r = inner(&mut child);
                 let used = child.min_rect();
                 super::set_bounds(&child, used);
-                lab_ui::paint::advance_block(ui, used);
+                ui.advance_cursor_after_rect(used);
                 InnerResponse::new(r.inner, r.response)
             }
             None => {
@@ -162,14 +162,16 @@ impl<'a> StatTile<'a> {
         } else {
             (8.0, 2.0, 18.0)
         };
-        let lg = galley(ui, self.label, lab_theme::font::body(11.0), t::TEXT_MUTED);
-        let vg = galley(
-            ui,
-            self.value,
-            lab_theme::font::mono_medium(size),
-            self.color,
+        let label_font = lab_theme::font::body(11.0);
+        let value_font = lab_theme::font::mono_medium(size);
+        let lg = galley(ui, self.label, label_font.clone(), t::TEXT_MUTED);
+        let vg = galley(ui, self.value, value_font.clone(), self.color);
+        // each span is a CSS `line-height: normal` box
+        let (lh, vh) = (
+            css_line_height(ui, &label_font),
+            css_line_height(ui, &value_font),
         );
-        let h = 2.0 + 2.0 * pad_y + lg.size().y + gap + vg.size().y;
+        let h = 2.0 + 2.0 * pad_y + lh + gap + vh;
         let (rect, resp) = ui.allocate_exact_size(vec2(width, h), Sense::hover());
         let painter = ui.painter();
         painter.rect(
@@ -181,9 +183,8 @@ impl<'a> StatTile<'a> {
         );
         let x = rect.left() + 11.0;
         let y = rect.top() + 1.0 + pad_y;
-        let vy = y + lg.size().y + gap;
-        painter.galley(pos2(x, y), lg, t::TEXT_MUTED);
-        painter.galley(pos2(x, vy), vg, self.color);
+        paint_line(painter, &lg, x, y, lh, t::TEXT_MUTED);
+        paint_line(painter, &vg, x, y + lh + gap, vh, self.color);
         let s = format!("{}: {}", self.label, self.value);
         resp.widget_info(|| WidgetInfo::labeled(Role::Label, true, &s));
         resp
@@ -270,7 +271,7 @@ impl<'a> Callout<'a> {
         ui.ctx()
             .request_repaint_after(std::time::Duration::from_millis(33));
         let resp = child.response();
-        lab_ui::paint::advance_block(ui, rect);
+        ui.advance_cursor_after_rect(rect);
         resp
     }
 }

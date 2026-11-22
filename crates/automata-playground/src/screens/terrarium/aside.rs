@@ -13,7 +13,6 @@ use eframe::egui::{
     CornerRadius, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Ui, UiBuilder, WidgetInfo,
     accesskit::Role, pos2, vec2,
 };
-use lab_ui::paint::advance_block;
 
 /// The breeding sentence.
 pub const BREEDING_TEXT: &str = "Children mix their parents’ rules, plus a few random flips.";
@@ -72,11 +71,7 @@ impl State {
         if self.terr.lineage().is_empty() {
             dashed_note(ui, NOTHING_BRED);
         } else {
-            for (k, entry) in self.terr.lineage().newest_first().enumerate() {
-                if k > 0 {
-                    // rows advance like CSS blocks (no item spacing): add the gap between
-                    ui.add_space(ui.spacing().item_spacing.y);
-                }
+            for entry in self.terr.lineage().newest_first() {
                 lineage_row(ui, entry);
             }
         }
@@ -220,7 +215,7 @@ fn lineage_row(ui: &mut Ui, entry: &LineageEntry) {
             .interact(*rect, group.scope_id().with(("chip", k)), Sense::hover())
             .widget_info(|| WidgetInfo::labeled(Role::Label, true, &code));
     }
-    advance_block(ui, used);
+    ui.advance_cursor_after_rect(used);
 }
 
 #[cfg(test)]
