@@ -96,6 +96,16 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   committed in the same commit. 3 (Finder `odoc`) is not done: it needs the Tray's stamp
   arming (wave 2); `Screen::receive` with a `Carry { rle }` is the hook to deliver it.
 
+  **packaging (2026-11-22)**: verified — `scripts/bundle-macos.sh --check` passes (sandboxed
+  headless + window smoke runs, `open` launch, no machine paths; MCP SKIP until `ap-mcp`), and
+  every `test-all` perf gate passes (start-up 455 ms). Two things for the lead:
+  (a) `cargo fmt --check` fails on `crates/ap-theme/src/lib.rs:448` (the `shade(CART_BODIES[0],
+  0.45)` assert wants wrapping), the only red step in `scripts/test-all.sh` right now;
+  (b) the windowed smoke run is not frame-capped: `mode=window … frames=21295
+  frame_ms_avg=0.04` in 3 s (~7 000 fps; headless does 146). Fine for a smoke test, but if the
+  real app repaints the same way while the Tray runs it would spin a core / the GPU — worth
+  checking that it paces to vsync or to the generation speed.
+
 ## Candidates for labkit
 
 - **shell**: `automata_playground::widgets::flow` (CSS flex-wrap rows with `margin-left:
