@@ -36,3 +36,44 @@ fn long_whitespace_runs_parse_in_linear_time() {
     );
     parses_quickly(&text);
 }
+
+/// Review finding 10: superseded Rule-lab runs kept computing (10 quick edits = 10 threads ×
+/// ~0.6 s). `run_cancellable` checks a flag between generations: set, it stops within a
+/// generation and returns `None`; never set, it is exactly `run`.
+#[test]
+fn runs_can_be_cancelled_between_generations() {
+    use ap_engine::analysis::{self, RunSpec, Seed};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let small = RunSpec::default();
+    let never = AtomicBool::new(false);
+    assert_eq!(
+        analysis::run_cancellable(&small, &never),
+        Some(analysis::run(&small))
+    );
+    assert_eq!(
+        analysis::run_cancellable(&small, &AtomicBool::new(true)),
+        None
+    );
+    // a big run cancelled from another thread stops long before it would finish
+    let big = RunSpec {
+        w: 256,
+        h: 256,
+        gens: 2000,
+        seed: Seed::MOCKUP_SOUP,
+        ..RunSpec::default()
+    };
+    let flag = Arc::new(AtomicBool::new(false));
+    let worker = {
+        let flag = Arc::clone(&flag);
+        std::thread::spawn(move || {
+            let t = Instant::now();
+            (analysis::run_cancellable(&big, &flag), t.elapsed())
+        })
+    };
+    std::thread::sleep(Duration::from_millis(20));
+    flag.store(true, Ordering::Relaxed);
+    let (out, took) = worker.join().unwrap();
+    assert!(out.is_none(), "a cancelled run returns nothing");
+    assert!(took < Duration::from_millis(150), "stopped after {took:?}");
+}

@@ -92,7 +92,9 @@ gens, weaves 1–4096).
   (`MOCKUP_SOUP` = seed 7 / 0.33; `key()`, `label()`, `centre(w, h)`, `grid(w, h, boundary)`):
   stamps centred at (⌊w/2⌋, ⌊h/2⌋) = the mockup's (31,19) / (29,19); soup = `js_lcg_next` (the
   mockup LCG in f64, rounding like JavaScript) in w/4 < x < 3w/4, h/5 < y < 4h/5 (`soup_grid`).
-  `run(&spec) -> Run` (clamped spec): `frames()` / `frame(g) -> Option<&Frame>` (bitsets:
+  `run(&spec) -> Run` (clamped spec; `run_cancellable(&spec, &AtomicBool) -> Option<Run>`
+  checks the flag before every generation, `None` once set — for worker threads a newer
+  request supersedes): `frames()` / `frame(g) -> Option<&Frame>` (bitsets:
   `get`, `population`, `alive_cells`, `to_pattern`, `trimmed_pattern`, `to_grid`),
   `populations()`, `population(g)`, `first_repeat() -> Option<Repeat { start, period }>` (exact:
   hash then full compare; `seen_at()` = start + period), `cell(g, x, y) -> CellChange { Empty,
@@ -347,11 +349,12 @@ the custom stamp.
 | method | |
 |---|---|
 | `script_text() -> String` | the editor's text as shown (may have errors) |
-| `set_script(&str) -> Result<(), Vec<ScriptError>>` | replaces the script: when it parses, the text becomes it and its spec takes effect (run synchronously); otherwise nothing changes and the line-numbered errors come back |
+| `set_script(&str) -> Result<(), Vec<ScriptError>>` | replaces the script: when it parses, the text becomes it (a leading BOM dropped) and its spec takes effect, its run done on return (also when that run was computing in the background); otherwise nothing changes and the line-numbered errors come back |
+| `finish()`, `is_running() -> bool` | wait for a run computing in the background / whether one is (the reads below then describe the previous run; every `&mut` call here and every `lab.*` bridge method finishes first) |
 | `errors() -> &[ScriptError]` | the editor text's errors (empty when it parses) |
 | `spec() -> RunSpec`, `script() -> &RuleScript` | the spec in effect: the last valid script's (with its name and probes) |
 | `set_rule(LifeRule)`, `set_spec(RunSpec)` | what the spec controls do: re-run (synchronously) and rewrite the script's changed directive lines |
-| `scrub(gen)`, `generation() -> usize`, `alive() -> usize` | the scrubbed generation (clamped to the run; pauses Play) and its population |
+| `scrub(gen)`, `generation() -> usize`, `alive() -> usize` | the scrubbed generation (clamped to the spec's run, waiting for a background one; pauses Play) and its population |
 | `report() -> Report` | peak, final, first repeat, period, verdict (LAB-3) |
 | `rle() -> String` | the scrubbed generation as RLE with `rule =`, untruncated (the panel shows the mockup's 420-character preview) |
 | `populations() -> &[usize]`, `lab() -> &Lab` | the run's populations; the GUI-free model (`screens::rule_lab::model::Lab`) |
@@ -364,9 +367,13 @@ whose canonical form changed — for canonical text that is `RuleScript::to_text
 spacing and other lines stay, and the changed directive's own line is replaced even if it held
 an error. While the editor has keyboard focus and the text has errors, the text isn't touched;
 the patch is applied when focus leaves. Specs above 4 M cell-generations typed into the
-script run on a worker thread (the old run stays on screen; API calls wait for the result).
+script (or set by a spec control, or by a received rule) run on a worker thread: the old run
+stays on screen, the run header, analysis tiles, verdict and RLE say "running…" instead of its
+numbers, and only the newest request computes (a superseded worker stops within a
+generation). API calls, Open in Playground and Export wait for the result.
 
-`receive(Carry)` (NAV-4) parses the rule (Moore) and re-runs. "Open in Playground" sends
+`receive(Carry)` (NAV-4) parses the rule (Moore) and re-runs (a big spec in the background,
+so the frame never waits). "Open in Playground" sends
 `Carry { rule: <code>, rle: Some(rle()) }` to the Tray. Export: Copy RLE, Copy script, Save
 `<stem>.rle`, Save `<stem>.rule` (`<stem>` from the script's name, `glider-garden`; the script
 exported is the text when it parses, else the last valid script).

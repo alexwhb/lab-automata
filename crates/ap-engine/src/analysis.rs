@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use thiserror::Error;
 
@@ -340,6 +341,19 @@ pub struct Run {
 /// each, and finds the first repeat exactly — frames are hashed and a hash hit is confirmed
 /// cell by cell, so a hash collision can never fake a cycle (LAB-3).
 pub fn run(spec: &RunSpec) -> Run {
+    run_until(spec, || false).0
+}
+
+/// [`run`], stopping early once `cancelled` is set (checked before every generation): returns
+/// `None` when cancelled, else exactly what [`run`] returns. For runs on a worker thread that a
+/// newer request supersedes (the Rule lab's big specs).
+pub fn run_cancellable(spec: &RunSpec, cancelled: &AtomicBool) -> Option<Run> {
+    let (run, stopped) = run_until(spec, || cancelled.load(Ordering::Relaxed));
+    (!stopped).then_some(run)
+}
+
+/// Runs `spec` until `stop()` says so; the run so far and whether it stopped early.
+fn run_until(spec: &RunSpec, mut stop: impl FnMut() -> bool) -> (Run, bool) {
     let spec = spec.clamped();
     let mut grid = spec.seed.grid(spec.w, spec.h, spec.boundary);
     let mut scratch = Scratch::default();
@@ -347,7 +361,12 @@ pub fn run(spec: &RunSpec) -> Run {
     let mut populations = Vec::with_capacity(spec.gens + 1);
     let mut seen: HashMap<u64, Vec<usize>> = HashMap::new();
     let mut first_repeat = None;
+    let mut stopped = false;
     for t in 0..=spec.gens {
+        if stop() {
+            stopped = true;
+            break;
+        }
         if t > 0 {
             grid.step_with(&spec.rule, spec.boundary, &mut scratch);
         }
@@ -367,12 +386,13 @@ pub fn run(spec: &RunSpec) -> Run {
         }
         frames.push(frame);
     }
-    Run {
+    let run = Run {
         spec,
         frames,
         populations,
         first_repeat,
-    }
+    };
+    (run, stopped)
 }
 
 impl Run {

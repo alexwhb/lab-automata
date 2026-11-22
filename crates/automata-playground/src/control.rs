@@ -582,6 +582,8 @@ fn screen_method(
         ap::LAB_GET => {
             let p: ap::LabGet = req.parse_params()?;
             prepare(app, ctx, Route::RuleLab, false);
+            // a run typed into the editor may still compute: answer with the spec's own
+            app.screens_mut().rule_lab.finish();
             to_value(&lab_state(
                 &app.screens().rule_lab,
                 samples(p.samples),
@@ -596,6 +598,7 @@ fn screen_method(
                 prepare(app, ctx, Route::RuleLab, p.show);
             }
             let lab = &mut app.screens_mut().rule_lab;
+            lab.finish();
             if let Err(errors) = checked.and_then(|()| lab.set_script(&p.script)) {
                 let lines: Vec<String> = errors
                     .iter()
@@ -614,6 +617,7 @@ fn screen_method(
             let p: ap::LabScrub = req.parse_params()?;
             prepare(app, ctx, Route::RuleLab, p.show);
             let lab = &mut app.screens_mut().rule_lab;
+            lab.finish(); // `scrub` clamps to the spec's run, not the one on screen
             lab.scrub(p.generation);
             let note = (lab.generation() != p.generation).then(|| {
                 format!(

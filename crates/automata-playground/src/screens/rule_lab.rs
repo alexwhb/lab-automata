@@ -138,8 +138,29 @@ impl State {
         self.lab.finish();
     }
 
-    /// Scrubs to `generation` (clamped to the run) and pauses, like the slider.
+    /// Waits for a run computing in the background (a big spec typed into the script, a spec
+    /// control, a rule received from another screen), if any. Every `&mut` method of the
+    /// control API and every `lab.*` bridge method calls it first, so the reads below describe
+    /// the spec in effect; after GUI edits call it (or check [`State::is_running`]) before
+    /// reading.
+    pub fn finish(&mut self) {
+        self.lab.finish();
+    }
+
+    /// True while a run computes in the background (the reads describe the previous run).
+    pub fn is_running(&self) -> bool {
+        self.lab.is_running()
+    }
+
+    /// Scrubs to `generation` (clamped to the run, once a background run is done) and pauses,
+    /// like the slider.
     pub fn scrub(&mut self, generation: usize) {
+        self.finish();
+        self.scrub_shown(generation);
+    }
+
+    /// The slider / `S`: scrubs the run on screen without waiting for a background run.
+    fn scrub_shown(&mut self, generation: usize) {
         self.playing = false;
         self.lab.set_generation(generation);
     }
@@ -177,14 +198,24 @@ impl State {
     /// One line for the MCP `describe` tool and screen readers.
     fn summary(&self) -> String {
         let spec = self.lab.spec();
+        let analysis = match self.running_note() {
+            Some(note) => note,
+            None => format!("{}; {}", self.well_description(), self.lab.report().verdict),
+        };
         format!(
-            "Rule lab: {}, {}, {}; {}; {}",
+            "Rule lab: {}, {}, {}; {analysis}",
             spec.rule.code(),
             spec.rule.neighbourhood().name(),
             spec.boundary.description(),
-            self.well_description(),
-            self.lab.report().verdict
         )
+    }
+
+    /// While a background run computes: what it runs ("Running 256 × 256 for 2000
+    /// generations…"), shown instead of the previous run's numbers.
+    fn running_note(&self) -> Option<String> {
+        self.lab
+            .pending_spec()
+            .map(|s| format!("Running {} × {} for {} generations…", s.w, s.h, s.gens))
     }
 
     fn well_description(&self) -> String {
@@ -244,7 +275,7 @@ impl Screen for State {
             Command::RunPause => self.toggle_play(),
             Command::Step => {
                 let next = (self.lab.generation() + 1) % (self.lab.gens() + 1);
-                self.scrub(next);
+                self.scrub_shown(next);
             }
         }
         true
@@ -253,7 +284,8 @@ impl Screen for State {
     fn receive(&mut self, carry: Carry, ctx: &mut Ctx) {
         match LifeRule::parse(&carry.rule) {
             Ok(rule) => {
-                self.set_rule(rule);
+                // a big spec runs in the background: the frame doesn't wait for it
+                self.lab.set_rule(rule, self.editor_focused);
                 ctx.toast(format!(
                     "Analysing {} from {}",
                     rule.code(),
@@ -307,8 +339,10 @@ impl State {
         self.lab.set_spec(spec, self.editor_focused);
     }
 
-    /// NAV-4: the Tray gets the rule and the scrubbed generation's cells.
+    /// NAV-4: the Tray gets the rule and the scrubbed generation's cells (of the spec in
+    /// effect: a background run is waited for).
     fn open_in_playground(&mut self, ctx: &mut Ctx) {
+        self.finish();
         let code = self.lab.spec().rule.code();
         ctx.go_with(
             Route::Tray,
@@ -317,6 +351,8 @@ impl State {
     }
 
     fn export(&mut self, item: usize, ctx: &mut Ctx) {
+        // the exported generation is the spec in effect's
+        self.finish();
         let stem = self.lab.file_stem();
         let generation = self.lab.generation();
         match item {
@@ -514,14 +550,16 @@ impl State {
         );
         let gens = self.lab.gens();
         let digits = gens.to_string().len().max(3);
-        let mut now = format!(
-            "gen {:0digits$} / {gens} · {} alive",
-            self.lab.generation(),
-            self.lab.alive()
-        );
-        if self.lab.is_running() || run_spec != spec.clamped() {
-            now.push_str(" · running…");
-        }
+        // while the spec's run computes, the old run's numbers aren't shown as the spec's
+        let now = match self.lab.pending_spec() {
+            Some(s) => format!("running {} × {} · {} gens…", s.w, s.h, s.gens),
+            None if run_spec != spec.clamped() => "running…".to_string(),
+            None => format!(
+                "gen {:0digits$} / {gens} · {} alive",
+                self.lab.generation(),
+                self.lab.alive()
+            ),
+        };
         let parts: [(String, FontId, Color32); 3] = [
             (code, lab_theme::font::mono_medium(22.0), t::INK),
             (what, lab_theme::font::body(12.0), t::TEXT_MUTED),
@@ -590,7 +628,7 @@ impl State {
                 .step(1.0)
                 .show(ui);
             if resp.changed() {
-                self.scrub(g.round().max(0.0) as usize);
+                self.scrub_shown(g.round().max(0.0) as usize);
             }
         });
         let pops: Vec<f32> = self
@@ -672,11 +710,24 @@ impl State {
 
         lbl(ui, "Analysis");
         let report = self.lab.report().clone();
+        // while the spec's run computes, its analysis isn't known yet
+        let running = self.running_note();
+        let value = |s: String| {
+            if running.is_some() {
+                "…".to_string()
+            } else {
+                s
+            }
+        };
         let tiles = [
-            ("Peak population", report.peak_text(), t::INK),
-            ("Final population", report.final_pop.to_string(), t::TEXT),
-            ("First repeat", report.first_repeat_text(), t::LINK),
-            ("Period", report.period_text(), t::LINK),
+            ("Peak population", value(report.peak_text()), t::INK),
+            (
+                "Final population",
+                value(report.final_pop.to_string()),
+                t::TEXT,
+            ),
+            ("First repeat", value(report.first_repeat_text()), t::LINK),
+            ("Period", value(report.period_text()), t::LINK),
         ];
         ui.scope(|ui| {
             ui.spacing_mut().item_spacing = vec2(8.0, 8.0);
@@ -688,7 +739,7 @@ impl State {
                 });
             }
         });
-        verdict(ui, &report.verdict);
+        verdict(ui, running.as_deref().unwrap_or(&report.verdict));
 
         lbl_row(
             ui,
@@ -697,7 +748,10 @@ impl State {
             lab_theme::font::body(11.0),
             t::TEXT_MUTED,
         );
-        let preview = self.lab.rle_preview();
+        let preview = match &running {
+            Some(_) => "running…".to_string(),
+            None => self.lab.rle_preview(),
+        };
         let name = format!("RLE of generation {}: {preview}", self.lab.generation());
         Card::panel().fill(t::INSET).show(ui, |ui| {
             CodeBlock::new(&preview)

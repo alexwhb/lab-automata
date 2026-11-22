@@ -21,10 +21,17 @@
 //!
 //! Runs are synchronous while they are small (the Rule lab's 64 × 40 × 400 takes a few ms);
 //! bigger specs typed into the script (up to 256 × 256 × 2000) run on a worker thread so the
-//! editor never stalls ([`Lab::poll`] adopts the result; the old run stays on screen meanwhile).
+//! editor never stalls ([`Lab::poll`] adopts the result; the old run stays on screen meanwhile,
+//! [`Lab::is_running`] says so, and [`Lab::finish`] waits for it). Only the newest request
+//! computes: a run superseded by another edit is cancelled within a generation.
+//!
+//! A leading byte-order mark (a script pasted from a file saved with one) is dropped from the
+//! text, so the first directive is recognised when the controls patch it.
 
 use ap_engine::analysis;
 use ap_engine::{LifeRule, Report, RuleScript, Run, RunSpec, ScriptError, Seed};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, TryRecvError, channel};
 
 /// The generation the Rule lab opens scrubbed to (the mockup's 120).
@@ -40,11 +47,28 @@ pub const SYNC_BUDGET: usize = 4_000_000;
 /// Characters of RLE body the export panel shows before "…" (the mockup's 420).
 pub const RLE_PREVIEW: usize = 420;
 
-/// A run computing on a worker thread.
+/// A run computing on a worker thread. Dropping it (a newer request replaced it, the result
+/// was adopted, the lab went away) cancels the worker.
 #[derive(Debug)]
 struct Pending {
     spec: RunSpec,
     rx: Receiver<Run>,
+    cancel: Arc<AtomicBool>,
+}
+
+impl Drop for Pending {
+    fn drop(&mut self) {
+        self.cancel.store(true, Ordering::Relaxed);
+    }
+}
+
+/// Counts a worker thread from its spawn to its end.
+struct WorkerGuard(Arc<AtomicUsize>);
+
+impl Drop for WorkerGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
 }
 
 /// The Rule lab's state. See the module docs for how the text and the spec stay in sync.
@@ -57,6 +81,7 @@ pub struct Lab {
     run: Run,
     report: Report,
     pending: Option<Pending>,
+    workers: Arc<AtomicUsize>,
     generation: usize,
 }
 
@@ -82,6 +107,7 @@ impl Lab {
             run,
             report,
             pending: None,
+            workers: Arc::default(),
         }
     }
 
@@ -120,6 +146,17 @@ impl Lab {
     /// True while a big run computes on the worker thread.
     pub fn is_running(&self) -> bool {
         self.pending.is_some()
+    }
+
+    /// The spec the background run computes, while there is one.
+    pub fn pending_spec(&self) -> Option<RunSpec> {
+        self.pending.as_ref().map(|p| p.spec)
+    }
+
+    /// Worker threads still computing, superseded ones included until they notice they were
+    /// cancelled (within a generation).
+    pub fn workers(&self) -> usize {
+        self.workers.load(Ordering::SeqCst)
     }
 
     /// The scrubbed generation.
@@ -208,8 +245,13 @@ impl Lab {
         self.set_spec(spec, editing);
     }
 
-    /// The editor's text changed (typing, paste): parse it and apply it when valid.
+    /// The editor's text changed (typing, paste): parse it and apply it when valid. A leading
+    /// byte-order mark is dropped.
     pub fn edit_text(&mut self, text: String) {
+        let text = match text.strip_prefix(BOM) {
+            Some(rest) => rest.to_string(),
+            None => text,
+        };
         if text == self.text {
             return;
         }
@@ -224,14 +266,18 @@ impl Lab {
         }
     }
 
-    /// Replaces the whole script if it parses (the control API): the text becomes `text`, its
-    /// spec takes effect and runs synchronously. On errors nothing changes.
+    /// Replaces the whole script if it parses (the control API): the text becomes `text`
+    /// (without a leading byte-order mark), its spec takes effect and its run is done when this
+    /// returns — also when that run was already computing in the background. On errors nothing
+    /// changes.
     pub fn set_script(&mut self, text: &str) -> Result<(), Vec<ScriptError>> {
+        let text = text.strip_prefix(BOM).unwrap_or(text);
         let script = RuleScript::parse(text)?;
         self.text = text.to_string();
         self.errors.clear();
         self.deferred = None;
         self.adopt(script, false);
+        self.finish();
         Ok(())
     }
 
@@ -283,25 +329,33 @@ impl Lab {
         if spec.clamped() == current {
             return;
         }
+        // a newer request replaces an older one: dropping it cancels its worker
+        self.pending = None;
         let cost = spec.w * spec.h * (spec.gens + 1);
         if allow_async && cost > SYNC_BUDGET {
             let (tx, rx) = channel();
             let job = spec;
+            let cancel = Arc::new(AtomicBool::new(false));
+            let stop = Arc::clone(&cancel);
+            self.workers.fetch_add(1, Ordering::SeqCst);
+            let guard = WorkerGuard(Arc::clone(&self.workers));
             let spawned = std::thread::Builder::new()
                 .name("rule-lab-run".into())
                 .spawn(move || {
-                    let _ = tx.send(analysis::run(&job));
+                    let _guard = guard;
+                    if let Some(run) = analysis::run_cancellable(&job, &stop) {
+                        let _ = tx.send(run);
+                    }
                 });
             if spawned.is_ok() {
-                // a newer request replaces an older one (its result is dropped)
                 self.pending = Some(Pending {
                     spec: spec.clamped(),
                     rx,
+                    cancel,
                 });
                 return;
             }
         }
-        self.pending = None;
         self.install(analysis::run(&spec));
     }
 
@@ -340,8 +394,13 @@ impl Lab {
     }
 }
 
-/// The directive a script line starts with (lower-case), if it is one of [`DIRECTIVES`].
+/// The byte-order mark a pasted file may start with.
+const BOM: char = '\u{feff}';
+
+/// The directive a script line starts with (lower-case), if it is one of [`DIRECTIVES`]. A
+/// leading byte-order mark is skipped.
 pub fn directive_of(line: &str) -> Option<&'static str> {
+    let line = line.strip_prefix(BOM).unwrap_or(line);
     let first = line.split_whitespace().next()?.to_ascii_lowercase();
     DIRECTIVES.into_iter().find(|d| *d == first)
 }
