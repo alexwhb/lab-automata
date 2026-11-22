@@ -472,6 +472,8 @@ name = "automata-playground"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ap-bench",
+ "ap-engine",
  "ap-theme",
  "eframe",
  "egui_kittest",
