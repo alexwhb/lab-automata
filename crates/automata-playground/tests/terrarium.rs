@@ -10,8 +10,8 @@ use ap_engine::presets::{TERRARIUM_START, rule_name};
 use automata_playground::Route;
 use automata_playground::screens::terrarium;
 use common::*;
-use eframe::egui::{self, Key, accesskit::Role};
-use egui_kittest::kittest::{NodeT, Queryable};
+use eframe::egui::{Key, accesskit::Role};
+use egui_kittest::kittest::Queryable;
 
 // ---- helpers --------------------------------------------------------------------------------
 
@@ -21,16 +21,6 @@ fn terr(h: &App) -> &terrarium::State {
 
 fn terr_mut(h: &mut App) -> &mut terrarium::State {
     &mut h.state_mut().screens_mut().terrarium
-}
-
-/// A 390 px wide app as tall as its page, so nothing needs the page to scroll (a column's own
-/// scroll area keeps `scroll_to_me` from scrolling the page; see PROGRESS.md › Requests).
-fn phone_full(route: Route) -> App {
-    let mut h = app().at(route).phone().build();
-    let need = h.state().content_height().ceil();
-    h.set_size(egui::vec2(PHONE_W, need.max(PHONE_H)));
-    settle(&mut h);
-    h
 }
 
 fn codes(h: &App) -> Vec<String> {
@@ -137,12 +127,7 @@ fn breeding_with_nothing_kept() {
     assert_eq!(lineage.len(), 1);
     assert_eq!(lineage[0].brood, 1);
     assert_eq!(lineage[0].parents, start_codes());
-    // egui puts a label's text in its AccessKit value
-    let labels: Vec<String> = get(&h, "brood 1 parents", Role::Group)
-        .children_recursive()
-        .filter(|n| n.accesskit_node().role() == Role::Label)
-        .filter_map(|n| n.accesskit_node().value())
-        .collect();
+    let labels = child_labels(&h, "brood 1 parents", Role::Group, Role::Label);
     assert_eq!(labels[0], "brood 1");
     assert_eq!(labels[1..], start_codes()[..], "one chip per parent");
     // six children, every one a valid Moore rule with a name or "Mutant"
@@ -372,7 +357,7 @@ fn renders_like_the_mockup_at_1440() {
 /// everything still works.
 #[test]
 fn works_at_390() {
-    let mut h = phone_full(Route::Terrarium);
+    let mut h = app().at(Route::Terrarium).phone().build();
     let c1 = get(&h, "Jar 1", Role::Group).rect();
     assert!(c1.left() >= 0.0 && c1.right() <= PHONE_W, "{c1:?}");
     let jars = get(&h, "Jars", Role::Region).rect();

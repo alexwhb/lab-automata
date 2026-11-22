@@ -77,24 +77,24 @@ impl State {
         }
     }
 
-    /// "Use a favourite": the two hand-offs (NAV-4).
+    /// "Use a favourite": the two hand-offs (NAV-4). They are `<a class="ghost">` in the
+    /// mockup: links are `box-sizing: content-box` (buttons are border-box), so 32 px plus the
+    /// border, 34 px tall.
     fn favourite(&self, ctx: &mut Ctx, ui: &mut Ui) {
         lbl(ui, "Use a favourite");
-        if ghost("Plant in the Tray")
-            .full_width()
-            .link()
-            .show(ui)
-            .clicked()
-        {
-            self.send_to(ctx, Route::Tray);
-        }
-        if ghost("Analyse in Rule lab")
-            .full_width()
-            .link()
-            .show(ui)
-            .clicked()
-        {
-            self.send_to(ctx, Route::RuleLab);
+        for (label, to) in [
+            ("Plant in the Tray", Route::Tray),
+            ("Analyse in Rule lab", Route::RuleLab),
+        ] {
+            if ghost(label)
+                .full_width()
+                .link()
+                .height(t::size::BUTTON + 2.0)
+                .show(ui)
+                .clicked()
+            {
+                self.send_to(ctx, to);
+            }
         }
     }
 }

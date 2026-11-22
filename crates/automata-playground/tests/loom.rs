@@ -9,19 +9,9 @@ use ap_engine::{Elementary, WeaveStart};
 use automata_playground::Route;
 use automata_playground::screens::loom::{self, KEYS_LABEL, key_name};
 use common::*;
-use eframe::egui::{self, Key, accesskit::Role};
+use eframe::egui::{Key, accesskit::Role};
 
 // ---- helpers --------------------------------------------------------------------------------
-
-/// A 390 px wide app as tall as its page, so nothing needs the page to scroll (a column's own
-/// scroll area keeps `scroll_to_me` from scrolling the page; see PROGRESS.md › Requests).
-fn phone_full(route: Route) -> App {
-    let mut h = app().at(route).phone().build();
-    let need = h.state().content_height().ceil();
-    h.set_size(egui::vec2(PHONE_W, need.max(PHONE_H)));
-    settle(&mut h);
-    h
-}
 
 fn loom(h: &App) -> &loom::State {
     &h.state().screens().loom
@@ -170,7 +160,7 @@ fn surprise_me_is_deterministic() {
             .collect()
     };
     let mut a = harness(Route::Loom);
-    let mut b = phone_full(Route::Loom);
+    let mut b = app().at(Route::Loom).phone().build();
     let first = picks(&mut a);
     assert_eq!(first, picks(&mut b), "seed 7 gives the same surprises");
     assert!(has_label(&a, &number_label(first[2])));
@@ -389,7 +379,7 @@ fn renders_like_the_mockup_at_1440() {
 /// At 390 the panels stack, every key is on screen (a 4 × 2 grid) and the aside follows.
 #[test]
 fn works_at_390() {
-    let mut h = phone_full(Route::Loom);
+    let mut h = app().at(Route::Loom).phone().build();
     for p in 0..8 {
         let r = get(&h, &key_name(30, p), Role::Button).rect();
         assert!(

@@ -50,7 +50,9 @@ impl RowSlot<'_> {
                     rect.min,
                     vec2(self.max_w.max(rect.width()), rect.height().max(28.0)),
                 ))
-                .layout(Layout::left_to_right(Align::Center)),
+                // top-aligned so the item measures its own height (a centred frame would fill
+                // the rect: a 15 px hint measured 28); `flow` centres each item on its line
+                .layout(Layout::left_to_right(Align::Min)),
         );
         child.spacing_mut().item_spacing = Vec2::ZERO;
         let r = add(&mut child);

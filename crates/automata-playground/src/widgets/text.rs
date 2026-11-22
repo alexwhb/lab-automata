@@ -58,7 +58,46 @@ pub fn wrapped_job(
         break_anywhere,
         ..Default::default()
     };
-    ui.painter().layout_job(job)
+    let g = ui.painter().layout_job(job);
+    match line_height {
+        Some(h) => css_rows(g, h),
+        None => g,
+    }
+}
+
+/// Re-places a galley's rows on CSS line boxes `line_h` apart, with Chrome's baseline in each
+/// (half-leading + rounded ascent, like [`text_top`]). egui rounds every row's height to whole
+/// pixels (12 px / 1.65 = 19.8 gives 20 px rows, 1.6 px of drift over nine lines) and centres
+/// glyphs its own way; Chrome keeps fractional line boxes and snaps only the glyphs. The
+/// galley becomes `n · line_h` tall.
+pub fn css_rows(galley: Arc<Galley>, line_h: f32) -> Arc<Galley> {
+    let Some(glyph) = galley.rows.iter().find_map(|r| r.row.glyphs.first()) else {
+        return galley;
+    };
+    let ascent = glyph.font_ascent.round();
+    let descent = (glyph.font_height - glyph.font_ascent).round();
+    // from a line box's top to the row's top, so the baseline lands where Chrome puts it
+    let offset = (line_h - (ascent + descent)) / 2.0 + ascent - glyph.pos.y;
+    let row_y = |i: usize| (i as f32 * line_h + offset).round();
+    let height = galley.rows.len().max(1) as f32 * line_h;
+    let placed = galley
+        .rows
+        .iter()
+        .enumerate()
+        .all(|(i, r)| r.pos.y == row_y(i));
+    if placed && galley.rect.height() == height {
+        return galley;
+    }
+    let mut g = (*galley).clone();
+    for (i, row) in g.rows.iter_mut().enumerate() {
+        row.pos.y = row_y(i);
+    }
+    g.rect.max.y = g.rect.min.y + height;
+    let rows = g.rows.iter().fold(g.rect, |r, row| {
+        r.union(row.rect().translate(g.rect.min.to_vec2()))
+    });
+    g.mesh_bounds = g.mesh_bounds.union(rows.expand(2.0));
+    Arc::new(g)
 }
 
 /// One line truncated with `…` to fit `width` (CSS `text-overflow: ellipsis`).

@@ -69,6 +69,7 @@ impl<'a> Slider<'a> {
         let (id, rect) = ui.allocate_space(vec2(w, 28.0));
         // 28 px drawn, 44 px target
         let mut resp = ui.interact(rect.expand2(vec2(0.0, 8.0)), id, Sense::click_and_drag());
+        super::reveal_on_focus(&resp);
         let (lo, hi) = (*self.range.start(), *self.range.end());
         let thumb_r = 8.0;
         let x0 = rect.left() + thumb_r;

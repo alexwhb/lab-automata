@@ -21,8 +21,8 @@ use crate::screens::Screen;
 use crate::widgets::tabs::bench_tabs;
 use ap_theme as t;
 use eframe::egui::{
-    Align, Color32, CornerRadius, Layout, Rect, ScrollArea, Stroke, Ui, UiBuilder, accesskit::Role,
-    pos2, vec2,
+    Align, Color32, CornerRadius, Id, Layout, Rect, ScrollArea, Stroke, Ui, UiBuilder,
+    accesskit::Role, pos2, vec2,
 };
 use lab_ui::layout::{FlexItem, flex_lines};
 
@@ -209,9 +209,14 @@ pub fn resolve(width: f32, cols: &[Column]) -> Vec<Vec<Placed>> {
 }
 
 /// Lays out a page row of `cols` at the cursor across the available width and calls
-/// `add(ui, ctx, i)` for each column inside its padding (a top-down `Ui` with `gap` spacing,
-/// scrolling if the column does). Side by side, columns fill [`Ctx::body_height`]; stacked,
-/// each is the route's [`panel_height`](crate::Route::panel_height). Returns the rect used.
+/// `add(ui, ctx, i)` for each column inside its padding (a top-down `Ui` with `gap` spacing).
+///
+/// Side by side, columns fill [`Ctx::body_height`] and a `scroll` column scrolls on its own
+/// (`overflow: auto`). Stacked (narrow windows), each line is the route's
+/// [`panel_height`](crate::Route::panel_height) and nothing scrolls but the page: a `scroll`
+/// column whose content is taller grows its line instead (measured the frame before). One
+/// scroller means `scroll_to_rect`, keyboard focus and AccessKit `ScrollIntoView` always
+/// reach the page (an inner egui `ScrollArea` would swallow them). Returns the rect used.
 pub fn columns(
     ui: &mut Ui,
     ctx: &mut Ctx,
@@ -221,13 +226,25 @@ pub fn columns(
     let origin = ui.cursor().min;
     let width = ui.available_width();
     let lines = resolve(width, cols);
-    let height = if lines.len() <= 1 {
-        ctx.body_height().max(MIN_PANEL_H)
+    let stacked = lines.len() > 1;
+    let panel_h = if stacked {
+        ctx.route().panel_height()
     } else {
-        ctx.route().panel_height().max(MIN_PANEL_H)
-    };
+        ctx.body_height()
+    }
+    .max(MIN_PANEL_H);
+    let route_id = ctx.route().id();
+    let content_id = |i: usize| Id::unique(("column-content", route_id, i));
     let mut y = origin.y;
     for line in &lines {
+        let height = if stacked {
+            line.iter()
+                .filter(|p| cols[p.index].scroll)
+                .filter_map(|p| ui.data(|d| d.get_temp::<f32>(content_id(p.index))))
+                .fold(panel_h, f32::max)
+        } else {
+            panel_h
+        };
         for p in line {
             let c = &cols[p.index];
             let rect = Rect::from_min_size(pos2(origin.x + p.x, y), vec2(p.width, height));
@@ -252,7 +269,7 @@ pub fn columns(
                     rect.bottom() - c.pad_y,
                 ),
             );
-            if c.scroll {
+            if c.scroll && !stacked {
                 let mut area_ui = col.new_child(
                     UiBuilder::new()
                         .max_rect(Rect::from_min_max(
@@ -284,6 +301,19 @@ pub fn columns(
                 );
                 inner_ui.spacing_mut().item_spacing = vec2(c.gap, c.gap);
                 add(&mut inner_ui, ctx, p.index);
+                if c.scroll {
+                    // stacked: remember the content's height so the line can grow to it
+                    let need = inner_ui.min_rect().height() + 2.0 * c.pad_y;
+                    let id = content_id(p.index);
+                    let old = ui.data(|d| d.get_temp::<f32>(id));
+                    if old.is_none_or(|o| (o - need).abs() > 0.5) {
+                        ui.data_mut(|d| d.insert_temp(id, need));
+                        if need > panel_h || old.is_some_and(|o| o > panel_h) {
+                            ui.ctx()
+                                .request_discard("stacked column content height changed");
+                        }
+                    }
+                }
             }
         }
         y += height;

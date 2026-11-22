@@ -274,12 +274,19 @@ pub fn nodes_with_roles(h: &App, roles: &[Role]) -> Vec<(Role, String, egui::Rec
         .collect()
 }
 
-/// The labels of the children with `role` under the node `parent` (with `parent_role`).
+/// A node's text: its label, or its value (egui puts a `Role::Label`'s text in `value`).
+pub fn text_of(node: &Node<'_>) -> String {
+    let ak = node.accesskit_node();
+    ak.label().or_else(|| ak.value()).unwrap_or_default()
+}
+
+/// The texts ([`text_of`]) of the children with `role` under the node `parent` (with
+/// `parent_role`).
 pub fn child_labels(h: &App, parent: &str, parent_role: Role, role: Role) -> Vec<String> {
     get(h, parent, parent_role)
         .children_recursive()
         .filter(|n| n.accesskit_node().role() == role)
-        .map(|n| n.accesskit_node().label().unwrap_or_default())
+        .map(|n| text_of(&n))
         .collect()
 }
 

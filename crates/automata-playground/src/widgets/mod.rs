@@ -127,6 +127,14 @@ pub fn set_bounds(ui: &Ui, rect: Rect) {
         .accesskit_node_builder(ui.unique_id(), |b| b.set_bounds(r));
 }
 
+/// Scrolls a control that just got keyboard focus (Tab / Shift-Tab) into view in its nearest
+/// scroller (egui doesn't): an aside at 1440, the page when columns stack (NAV-5).
+pub(crate) fn reveal_on_focus(resp: &Response) {
+    if resp.gained_focus() {
+        resp.scroll_to_me(None);
+    }
+}
+
 /// Click sense when enabled, hover only when disabled.
 pub(crate) fn sense(enabled: bool) -> Sense {
     if enabled {
@@ -148,6 +156,7 @@ pub(crate) fn interact(
     pressed: Option<bool>,
 ) -> Response {
     let resp = ui.interact(target, id, sense(enabled));
+    reveal_on_focus(&resp);
     let name = name.to_string();
     resp.widget_info(|| {
         let mut info = eframe::egui::WidgetInfo::labeled(role, enabled, &name);
