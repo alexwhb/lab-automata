@@ -597,6 +597,14 @@ fn pasting_a_pattern_arms_a_stamp() {
 #[test]
 fn dropping_a_pattern_file_arms_it() {
     let mut h = cleared();
+    // while the file hovers over the window, the hint chip says what a drop does
+    h.input_mut().hovered_files.push(egui::HoveredFile {
+        path: Some("/tmp/two-blinkers.cells".into()),
+        mime: String::new(),
+    });
+    settle(&mut h);
+    assert!(has_label(&h, tray::DROP_HINT));
+    h.input_mut().hovered_files.clear();
     let file: egui::DroppedFileHandle = Arc::new(Dropped {
         path: "/tmp/two-blinkers.cells".into(),
         text: "! no name\nOOO.OOO\n".into(),
@@ -607,6 +615,20 @@ fn dropping_a_pattern_file_arms_it() {
     assert_eq!(custom.name, "two-blinkers");
     assert_eq!(custom.pattern.population(), 6);
     assert!(has_label(&h, "Click to place two-blinkers"));
+    assert!(!has_label(&h, tray::DROP_HINT));
+    // a file that isn't a pattern is refused with a toast
+    let bad: egui::DroppedFileHandle = Arc::new(Dropped {
+        path: "/tmp/notes.rle".into(),
+        text: "x = 2, y = 2\n2o$qq!".into(),
+    });
+    h.input_mut().dropped_files.push(bad);
+    settle(&mut h);
+    assert!(
+        toasts(&h)
+            .iter()
+            .any(|t| t.starts_with("Couldn't read notes.rle"))
+    );
+    assert_eq!(tray(&h).custom_stamp().unwrap().name, "two-blinkers");
 }
 
 // ---- TRAY-10: keyboard ----------------------------------------------------------------------
@@ -753,6 +775,21 @@ fn renders_at_1440_and_390() {
     tray_mut(&mut h).set_running(false);
     if compare {
         save_compare(&img, Route::Tray, 1440);
+        // review renders: the keyboard cursor and hover, then the top-down view
+        let label = grid_node_label(&h);
+        get(&h, &label, Role::Grid).focus();
+        settle(&mut h);
+        h.hover_at(at(&h, 8, 6));
+        settle(&mut h);
+        h.run_steps(1);
+        let img = h.render().expect("render");
+        save(&img, &repo().join("target/compare/Tray-1440-focus.png"));
+        click_button(&mut h, "Top-down view");
+        settle(&mut h);
+        save(
+            &render(&mut h),
+            &repo().join("target/compare/Tray-1440-flat.png"),
+        );
     }
 
     let mut p = app().at(Route::Tray).phone().build();

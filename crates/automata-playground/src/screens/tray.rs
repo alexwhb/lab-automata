@@ -22,6 +22,7 @@ mod panels;
 mod stage;
 
 pub use model::{Model, TrayStats, fit_to_tray, line_cells};
+pub use stage::DROP_HINT;
 
 use super::Screen;
 use crate::ctx::{Carry, Command, Ctx, Ticker};

@@ -17,6 +17,8 @@ use eframe::egui::{
 /// Chips sit 16 px from the stage's sides and 14 px from its top / bottom.
 const CHIP_X: f32 = 16.0;
 const CHIP_Y: f32 = 14.0;
+/// The hint chip while a file is dragged over the window (TRAY-9).
+pub const DROP_HINT: &str = "Drop a .rle or .cells file to arm it as a stamp";
 
 impl State {
     /// Draws and drives the stage (`ui` is the `.graph` stage, already painted).
@@ -156,13 +158,19 @@ impl State {
                 pos2(stage.left() + CHIP_X, stage.top() + CHIP_Y),
                 Align2::LEFT_TOP,
             );
-        Chip::default().part(self.tool_hint(), t::TEXT_DIM).show_at(
+        // while a file is dragged over the window the hint says what dropping it does
+        let dragging_file = ctx.egui().input(|i| !i.raw.hovered_files.is_empty());
+        let hint = if dragging_file {
+            DROP_HINT.to_string()
+        } else {
+            self.tool_hint()
+        };
+        Chip::default().part(hint, t::TEXT_DIM).show_at(
             ui,
             pos2(stage.right() - CHIP_X, stage.top() + CHIP_Y),
             Align2::RIGHT_TOP,
         );
         legend(ui, stage);
-        let _ = ctx;
     }
 }
 

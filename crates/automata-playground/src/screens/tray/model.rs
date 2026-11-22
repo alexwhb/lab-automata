@@ -108,17 +108,13 @@ impl Model {
         self.history.push(s.population);
     }
 
-    /// Sets one cell (Draw / Erase); the newest history value follows the edit, as the
-    /// mockup's `edit()` does. Returns whether anything changed.
-    pub fn set_cell(&mut self, x: usize, y: usize, alive: bool) -> bool {
-        if x >= self.grid.width() || y >= self.grid.height() {
-            return false;
+    /// Sets one cell (Draw / Erase; drawing makes a newborn even over a live cell, as the
+    /// mockup's `cells[i] = 1` does). The newest history value follows the edit, as the
+    /// mockup's `edit()` does. Cells off the tray are ignored.
+    pub fn set_cell(&mut self, x: usize, y: usize, alive: bool) {
+        if self.grid.set(x, y, alive) {
+            self.edited();
         }
-        // Draw makes a newborn even over a live cell (the mockup sets `cells[i] = 1`)
-        let changed = self.grid.is_alive(x, y) != alive || alive;
-        self.grid.set(x, y, alive);
-        self.edited();
-        changed
     }
 
     /// Paints every cell on the straight line from `from` to `to` (both included), so a fast
@@ -281,7 +277,8 @@ mod tests {
         assert_eq!(m.grid().population(), 5);
         m.set_cell(1, 1, false);
         assert_eq!(m.history().latest(), 4);
-        assert!(!m.set_cell(99, 0, true), "outside is ignored");
+        m.set_cell(99, 0, true);
+        assert_eq!(m.grid().population(), 4, "outside is ignored");
     }
 
     #[test]
