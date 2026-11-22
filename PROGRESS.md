@@ -170,6 +170,13 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   paused as the mockup says. One line to change in `terrarium.rs::tick` if the lead prefers
   the always-on bob.
 
+- **mcp → lead (FYI, hooks)**: the MCP wave touched the shell minimally: `app.rs` has a
+  `control` field, `control::poll(self, ui)` as the first line of `frame()`, `App::logic` →
+  `control::logic`, and `pub(crate) fn enter_screen(route, ctx)` (the bridge enters a screen
+  once before driving it in the background, so its first-visit set-up can't undo the change);
+  `AppOptions::default()` now listens on `ap_shared::bridge_socket_path()` (tests / smoke: none);
+  `lib.rs` has `run_with(opts)`; `main.rs` takes `--no-mcp`. New crates: `ap-shared`, `ap-mcp`.
+
 ## Candidates for labkit
 
 - **shell**: `automata_playground::widgets::flow` (CSS flex-wrap rows with `margin-left:
@@ -182,6 +189,12 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   `Menu` / `MenuItem`, `has_popup` / `expanded` on the button, ↑ / ↓ / Escape / click-outside),
   and the script ⇄ spec line patching in `screens/rule_lab/model.rs` (`patch_text`) for other
   netlist editors (Breadbox's SPICE workbench).
+
+- **mcp**: `automata_playground::control`'s `AccessCapture` egui plugin and `outline_nodes`
+  (AccessKit tree → `lab_mcp::bridge::proto::AccessNode`s) are a verbatim copy of Chem
+  Playground's; with the generic half of both `control.rs` files (status / navigate /
+  screenshot with settle frames / describe, the hidden-window `logic`) they could move into
+  `lab-mcp` behind an `egui` feature, parameterised by the app's route type.
 
 ## Open issues
 
