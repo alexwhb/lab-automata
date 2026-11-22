@@ -491,7 +491,8 @@ impl State {
         for text in pastes {
             match pattern::parse_any(&text) {
                 Ok(file) if !file.pattern.is_empty() => {
-                    self.arm_file(file, "Pasted pattern", ctx);
+                    let note = self.arm_parsed(file, "Pasted pattern");
+                    ctx.toast(note);
                 }
                 Ok(_) => ctx.toast("The clipboard's pattern has no live cells"),
                 Err(e) => ctx.toast(format!("Couldn't read the pasted pattern: {e}")),
@@ -499,32 +500,58 @@ impl State {
         }
         for file in dropped {
             let path = file.path().to_path_buf();
-            let name = path
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "dropped file".into());
-            let too_big = std::fs::metadata(&path).is_ok_and(|m| m.len() > MAX_PATTERN_BYTES);
-            let text = if too_big {
+            let text = if too_big(&path) {
                 Err("the file is too large for a pattern".to_string())
             } else {
                 file.bytes()
                     .map(|b| String::from_utf8_lossy(&b).into_owned())
             };
-            match text.and_then(|t| pattern::parse_file(&name, &t).map_err(|e| e.to_string())) {
-                Ok(f) if !f.pattern.is_empty() => {
-                    let stem = path
-                        .file_stem()
-                        .map(|s| s.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| name.clone());
-                    self.arm_file(f, &stem, ctx);
-                }
-                Ok(_) => ctx.toast(format!("{name} has no live cells")),
-                Err(e) => ctx.toast(format!("Couldn't read {name}: {e}")),
+            match self.arm_text(&path, text) {
+                Ok(note) | Err(note) => ctx.toast(note),
             }
         }
     }
 
-    fn arm_file(&mut self, file: PatternFile, fallback: &str, ctx: &mut Ctx) {
+    /// Reads a `.rle` / `.cells` file and arms it as the custom stamp (TRAY-9: a file opened
+    /// from Finder, `open -a`, or named on the command line; dropped files take the same
+    /// path). `Ok` says what was armed, `Err` why the file couldn't be — the toast to show.
+    pub fn open_file(&mut self, path: &std::path::Path) -> Result<String, String> {
+        let text = if too_big(path) {
+            Err("the file is too large for a pattern".to_string())
+        } else {
+            std::fs::read(path)
+                .map(|b| String::from_utf8_lossy(&b).into_owned())
+                .map_err(|e| e.to_string())
+        };
+        self.arm_text(path, text)
+    }
+
+    /// Parses `text` (read from `path`, or why it couldn't be) and arms it, named by the
+    /// file's `#N` / `!Name:` or else its stem. Returns the toast.
+    fn arm_text(
+        &mut self,
+        path: &std::path::Path,
+        text: Result<String, String>,
+    ) -> Result<String, String> {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "dropped file".into());
+        match text.and_then(|t| pattern::parse_file(&name, &t).map_err(|e| e.to_string())) {
+            Ok(f) if !f.pattern.is_empty() => {
+                let stem = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| name.clone());
+                Ok(self.arm_parsed(f, &stem))
+            }
+            Ok(_) => Err(format!("{name} has no live cells")),
+            Err(e) => Err(format!("Couldn't read {name}: {e}")),
+        }
+    }
+
+    /// Arms a parsed file (named by its `#N` / `!Name:`, else `fallback`); returns the toast.
+    fn arm_parsed(&mut self, file: PatternFile, fallback: &str) -> String {
         let name = file
             .name
             .as_deref()
@@ -533,10 +560,13 @@ impl State {
             .unwrap_or(fallback)
             .to_string();
         self.arm(name.clone(), &file.pattern);
-        ctx.toast(format!(
-            "Armed {name} as a stamp: click the tray to place it"
-        ));
+        format!("Armed {name} as a stamp: click the tray to place it")
     }
+}
+
+/// Files larger than [`MAX_PATTERN_BYTES`] aren't read as patterns.
+fn too_big(path: &std::path::Path) -> bool {
+    std::fs::metadata(path).is_ok_and(|m| m.len() > MAX_PATTERN_BYTES)
 }
 
 impl Screen for State {
@@ -625,16 +655,19 @@ impl Screen for State {
         if self.running {
             let n = self.ticker.steps(ctx.dt(), self.speed);
             self.step_n(n);
-            ctx.animate();
+            // nothing moves between generations: the next frame when the next one is due
+            ctx.wake_in(self.ticker.due_in(self.speed));
         }
-        if self.tilt.step(ctx.dt()) {
-            ctx.animate();
-        }
+        self.tilt.step(ctx.dt());
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => self.rules_aside(ui),
             1 => layout::bench(ui, ctx, self, |s, ctx, stage| s.stage(ctx, stage)),
             _ => self.readouts(ui),
         });
+        // the tilt eases at display rate (also right after "Top-down view" this frame)
+        if self.tilt.is_animating() {
+            ctx.animate();
+        }
     }
 
     fn describe(&self) -> String {

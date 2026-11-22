@@ -286,6 +286,8 @@ impl AutomataApp {
     pub fn frame(&mut self, ui: &mut Ui) {
         crate::control::poll(self, ui);
         let egui_ctx = ui.ctx().clone();
+        // patterns opened from Finder / the command line (TRAY-9) arm the Tray's stamp
+        crate::platform::deliver(self, &egui_ctx);
         let full = ui.max_rect();
         let body_h = (full.height() - self.header_height).max(0.0);
         let route = self.route;

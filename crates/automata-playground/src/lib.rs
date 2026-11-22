@@ -11,6 +11,7 @@ pub mod control;
 pub mod ctx;
 pub mod launcher;
 pub mod layout;
+pub mod platform;
 pub mod router;
 pub mod screens;
 pub mod smoke;
@@ -37,10 +38,11 @@ pub const MANIFEST_DIR: Option<&str> = match option_env!("AUTOMATA_BUNDLE") {
     None => Some(env!("CARGO_MANIFEST_DIR")),
 };
 
-/// Window options: 1440 × 900 (the mockup's board), at least 390 × 600, wgpu, the window's
-/// size and position persisted.
+/// Window options: 1440 × 900 (the mockup's board), at least 390 × 600, wgpu presenting at
+/// vsync (screens pace the frames they ask for: [`Ctx::animate`], [`Ctx::wake_in`]), the
+/// window's size and position persisted.
 pub fn native_options() -> eframe::NativeOptions {
-    eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title(APP_NAME)
             .with_app_id(APP_ID)
@@ -49,7 +51,9 @@ pub fn native_options() -> eframe::NativeOptions {
         persist_window: true,
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
-    }
+    };
+    options.wgpu_options.surface.present_mode = eframe::wgpu::PresentMode::AutoVsync;
+    options
 }
 
 /// Runs the app (with the MCP bridge on its default socket).
@@ -59,9 +63,13 @@ pub fn run() -> eframe::Result<()> {
 
 /// Runs the app with `opts`.
 pub fn run_with(opts: AppOptions) -> eframe::Result<()> {
+    platform::install_open_documents();
     eframe::run_native(
         APP_NAME,
         native_options(),
-        Box::new(|cc| Ok(Box::new(AutomataApp::new(cc, opts)))),
+        Box::new(|cc| {
+            platform::set_receiver(&cc.egui_ctx);
+            Ok(Box::new(AutomataApp::new(cc, opts)))
+        }),
     )
 }
