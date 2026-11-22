@@ -600,6 +600,20 @@ fn rrect_outline_fixed(r: Rect, radii: Radii, segments: usize, out: &mut Vec<Pos
     }
 }
 
+/// The Gaussian σ Chrome draws a CSS blur radius `r` with (`box-shadow: 0 0 <r>px`): the spec's
+/// σ = r / 2, as Skia renders it — three box blurs of width w = ⌊σ · 3√(2π) / 4 + ½⌋, whose
+/// combined σ is √((w² − 1) / 4) (16 px → 7.48, 10 px → 4.47; measured from Chrome's pixels:
+/// 7.6 and 4.5). A little tighter than r / 2, so the glow sits closer to the cell.
+pub fn css_blur_sigma(r: f32) -> f32 {
+    let sigma = r / 2.0;
+    if sigma < 2.0 {
+        // Skia blurs this small with a true Gaussian
+        return sigma.max(0.0);
+    }
+    let w = (sigma * 3.0 * (std::f32::consts::TAU).sqrt() / 4.0 + 0.5).floor();
+    ((w * w - 1.0) / 4.0).sqrt()
+}
+
 /// The standard normal CDF Φ (Abramowitz & Stegun 7.1.26 erf, |error| < 1.5e-7).
 pub fn norm_cdf(x: f32) -> f32 {
     let z = x / std::f32::consts::SQRT_2;
@@ -826,6 +840,22 @@ mod tests {
         let max_a = m.vertices.iter().map(|v| v.color.a()).max().unwrap();
         // Φ(1) − Φ(−1) squared ≈ 0.466 at the centre of a 16 px box blurred by σ = 8
         assert!((max_a as f32 / 255.0 - 0.466).abs() < 0.02, "{max_a}");
+    }
+
+    /// Chrome's box-shadow blur (Skia's three box blurs) for the cell glows' radii.
+    #[test]
+    fn css_blur_sigma_matches_skia() {
+        assert!((css_blur_sigma(16.0) - 7.483).abs() < 1e-3);
+        assert!((css_blur_sigma(10.0) - 4.472).abs() < 1e-3);
+        assert_eq!(css_blur_sigma(2.0), 1.0);
+        assert_eq!(css_blur_sigma(0.0), 0.0);
+        // never far from the spec's r / 2
+        for r in (4..=80).map(|r| r as f32) {
+            assert!(
+                (css_blur_sigma(r) - r / 2.0).abs() < 0.2 * r / 2.0 + 0.6,
+                "{r}"
+            );
+        }
     }
 
     #[test]

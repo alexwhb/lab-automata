@@ -7,7 +7,7 @@
 //! band at y 286, the blurred shadow ellipse at (70, 636) 700 × 60, and the tray at (6, 66)
 //! 828 × 562 (origin 50% 100%) holding a grid of 16 px cells with 3 px gaps at (35, 36).
 
-use crate::draw::{Batch, Radii, galley_top_for_css_top, layout_text, radii};
+use crate::draw::{Batch, Radii, css_blur_sigma, galley_top_for_css_top, layout_text, radii};
 use crate::projection::{Projection, Tilt, View};
 use crate::stage;
 use crate::tokens::{self, CellLook};
@@ -303,7 +303,7 @@ impl<'a> TrayScene<'a> {
                     b.blurred_rect(
                         p,
                         Rect::from_min_size(face_at, cell_size),
-                        look.glow_px / 2.0,
+                        css_blur_sigma(look.glow_px),
                         glow,
                     );
                 }
