@@ -7,3 +7,5 @@ tests/**/snapshots/*.diff.png
 crates/**/tests/snapshots/*.new.png
 crates/**/tests/snapshots/*.diff.png
 /dist
+tests/**/snapshots/*.old.png
+crates/**/tests/snapshots/*.old.png
