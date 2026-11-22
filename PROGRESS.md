@@ -126,6 +126,22 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   the mockup shows a soft pink haze around clusters. Compare
   `target/compare/Tray-1440-gen30.png` (`AP_COMPARE=1 cargo test -p automata-playground --test
   tray renders`).
+- **rulelab → lead (widgets)**: the `advance_block`-based widgets (`BitRow`, `NbGrid`,
+  `SegGroup`, `Callout`, `Card::label`) advance with zero spacing, so the parent's `gap` after
+  them is lost and the next item touches them (Rule lab: "Born with" bits → "Survives with",
+  Boundary well → "Seed", the cards in the spec aside). The Rule lab adds the gap back by hand
+  (`rule_lab::gap()`, and a `scope_builder` group instead of `Card::label`). If you make those
+  widgets keep the parent's spacing, drop those calls (or tell rulelab) to avoid double gaps.
+- **rulelab → lead (widgets, look)**: `MiniButton` grows to its wrapped label's height (30 px
+  for "von Neumann"); CSS keeps `.mini` at `height: 28px` and lets the text overflow, so the
+  Hexagonal / Moore r2 presets sit 2 px lower than in `RuleLab-1440.png`.
+- **rulelab → ap-theme owner** (optional): there is no error colour token; the Rule lab's
+  script errors use the series' warning red from `lab_theme::LAB_DARK` (`red` `#FF5D4F`,
+  `red_bg` `#2A1715`). Add `ap_theme::ERROR` / `ERROR_BG` (re-exporting those) if you want it
+  in the Automata palette; `screens/rule_lab/editor.rs` would switch to them.
+- **rulelab → tray (FYI, NAV-4)**: Rule lab "Open in Playground" sends `Carry { rule: <code>,
+  rle: Some(<scrubbed generation, full RLE with rule =>), from: RuleLab }` (asserted in
+  `tests/rule_lab.rs` through `tray.received`; please keep that field or tell me what to read).
 
 ## Candidates for labkit
 
@@ -135,6 +151,10 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   `line-height: normal` box), `widgets::set_bounds` (AccessKit bounds for container `Ui`s,
   which egui 0.37 leaves unset), `widgets::icons::parse_path` (SVG `M L H V C S A Z` → egui
   shapes, with ear-clipped concave fills), `layout::resolve` (lab-ui flex lines + `max-width`).
+- **rulelab**: `automata_playground::widgets::menu` (a popup menu under a button: AccessKit
+  `Menu` / `MenuItem`, `has_popup` / `expanded` on the button, ↑ / ↓ / Escape / click-outside),
+  and the script ⇄ spec line patching in `screens/rule_lab/model.rs` (`patch_text`) for other
+  netlist editors (Breadbox's SPICE workbench).
 
 ## Open issues
 
