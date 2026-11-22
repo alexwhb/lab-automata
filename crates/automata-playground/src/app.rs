@@ -311,7 +311,10 @@ impl AutomataApp {
             for cmd in commands(&egui_ctx) {
                 screen.command(cmd, &mut ctx);
             }
-            screen.tick(&mut ctx);
+            // once per frame: a discarded pass (multi-pass layout) re-runs with the same dt
+            if egui_ctx.current_pass_index() == 0 {
+                screen.tick(&mut ctx);
+            }
             nav = nav.or(ctx.nav.take());
         }
         self.entered = Some(route);

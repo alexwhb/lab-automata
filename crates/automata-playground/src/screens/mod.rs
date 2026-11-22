@@ -33,8 +33,8 @@ pub trait Screen {
     fn tab_actions(&mut self, _ctx: &mut Ctx, _slot: &mut RowSlot) {}
 
     /// Advances the screen's simulation by the frame's time ([`Ctx::dt`]) while it runs. It
-    /// runs before anything is drawn, so the header's counters (`gen 0042`) and the body show
-    /// the same generation.
+    /// runs once per frame (not again in a discarded layout pass) before anything is drawn,
+    /// so the header's counters (`gen 0042`) and the body show the same generation.
     fn tick(&mut self, _ctx: &mut Ctx) {}
 
     /// A keyboard command (NAV-5). Return `true` if handled.
