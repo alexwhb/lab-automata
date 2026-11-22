@@ -2,8 +2,8 @@
 resolver = "3"
 members = [
     "crates/ap-theme",
-    "crates/automata-playground",
     "crates/ap-engine",
+    "crates/automata-playground",
     "crates/ap-bench",
 ]
 
