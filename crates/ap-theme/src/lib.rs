@@ -152,6 +152,28 @@ pub const PLOT_FILL: Color32 = rgba(240, 107, 208, 0.14);
 pub const PLOT_GUIDE: Color32 = rgba(255, 255, 255, 0.05);
 /// Plot background `#0B0C0E`.
 pub const PLOT_BG: Color32 = hex(0x0B0C0E);
+/// Plot playhead (Rule lab `head`, `stroke="#4CC3F0" stroke-width="1.5"`) = [`LINK`].
+pub const PLAYHEAD: Color32 = LINK;
+
+// ============================================================================================
+// Inputs and glyphs (added by the app shell, wave 1)
+
+/// `input[type=range]` with `accent-color: #F06BD0` as Chrome draws it in the mockup
+/// (measured from `screenshots/Tray-1440.png`): an 8 px track, radius 4, unfilled part
+/// `#3B3B3B` with a 1 px `#858585` border, the filled part and the 16 px thumb in [`ACCENT`].
+pub const RANGE_TRACK: Color32 = hex(0x3B3B3B);
+/// Border of the unfilled range track `#858585`.
+pub const RANGE_BORDER: Color32 = hex(0x858585);
+/// Series "Icon family · cell glyphs": empty cells of the 3 × 3 glyphs `fill="#3A3A3A"`.
+pub const GLYPH_OFF: Color32 = hex(0x3A3A3A);
+/// Tray "8 neighbours · edges wrap" glyph: the neighbour squares `fill="#2A1A26"`.
+pub const NB_GLYPH_OFF: Color32 = hex(0x2A1A26);
+/// Series identity swatch frame `background: #171717` (= [`GHOST`]) and the logo's body.
+pub const LOGO_BODY: Color32 = GHOST;
+/// Lineage code chips (Terrarium) `border: 1px solid #6B2A5C; background: #1A0E17` =
+/// [`EDGE`] on [`CALLOUT`]; the dashed "Nothing bred yet." box border `#2E2E2E`.
+pub const DASHED: Color32 = BORDER_STRONG;
+
 
 // ============================================================================================
 // Cell-age scale (automata only) — "reads in greyscale too; live cells lift 6 px off the tray"
