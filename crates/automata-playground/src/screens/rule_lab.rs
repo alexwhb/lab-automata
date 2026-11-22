@@ -258,7 +258,7 @@ impl Screen for State {
             Ok(rule) => {
                 self.set_rule(rule);
                 ctx.toast(format!(
-                    "Analysing {} from the {}",
+                    "Analysing {} from {}",
                     rule.code(),
                     carry.from.title()
                 ));

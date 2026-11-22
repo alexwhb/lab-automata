@@ -150,6 +150,19 @@ fn other_families_are_disabled_and_explained() {
         group,
         ["Life-like", "Generations", "Larger than Life", "Lenia"]
     );
+    // hovering one shows the explanation; clicking it does nothing
+    let mut h = h;
+    h.get_by_label("Lenia").hover();
+    assert!(
+        step_until(&mut h, 90, |h| h
+            .query_by_label("Not in this version")
+            .is_some()),
+        "tooltip"
+    );
+    h.get_by_label("Lenia").click();
+    settle(&mut h);
+    assert_eq!(pressed(&h, "Life-like"), Some(true));
+    assert_eq!(pressed(&h, "Lenia"), Some(false));
 }
 
 /// LAB-1: toggling neighbourhood cells updates "N cells", the bit rows (bits above N go),
@@ -644,4 +657,50 @@ fn renders_errors_and_the_export_menu() {
         "{menu:?}"
     );
     screenshot(&mut h, "rule-lab-export-menu");
+}
+
+/// NAV-5: Export opens from the keyboard with its first item focused, ↑ / ↓ move, Enter
+/// activates; Tab leaves the script editor; `S` steps the scrubber, but not while typing.
+#[test]
+fn keyboard() {
+    let mut h = lab();
+    get(&h, "Export", Role::Button).focus();
+    h.step();
+    press(&mut h, Key::Enter);
+    settle(&mut h);
+    assert_eq!(focused_label(&h).as_deref(), Some("Copy RLE"));
+    press(&mut h, Key::ArrowDown);
+    settle(&mut h);
+    assert_eq!(focused_label(&h).as_deref(), Some("Copy script"));
+    press(&mut h, Key::Enter);
+    settle(&mut h);
+    assert_eq!(
+        h.state().last_copied(),
+        Some(RuleScript::default().to_text().as_str())
+    );
+    assert!(!has_label(&h, "Copy RLE"), "closed after Enter");
+
+    // S steps one generation (and pauses)
+    h.ctx.memory_mut(|m| {
+        if let Some(id) = m.focused() {
+            m.surrender_focus(id);
+        }
+    });
+    press(&mut h, Key::S);
+    settle(&mut h);
+    assert_eq!(h.state().screens().rule_lab.generation(), 121);
+
+    // in the editor, S is a letter and Tab moves on
+    editor(&h).focus();
+    h.step();
+    h.key_press_modifiers(Modifiers::COMMAND, Key::ArrowDown);
+    h.step();
+    editor(&h).type_text("s");
+    press(&mut h, Key::S);
+    settle(&mut h);
+    assert_eq!(h.state().screens().rule_lab.generation(), 121);
+    assert!(script(&h).ends_with(".ends"), "{}", script(&h));
+    press(&mut h, Key::Tab);
+    settle(&mut h);
+    assert_ne!(focused_label(&h).as_deref(), Some("Rule script"));
 }

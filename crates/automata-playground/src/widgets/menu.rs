@@ -192,6 +192,18 @@ impl<'a> Menu<'a> {
                 }
                 // ↑ / ↓ move between items while one has focus
                 if let Some(cur) = responses.iter().position(Response::has_focus) {
+                    // keep egui's own arrow-key focus moves out of the way
+                    let id = responses[cur].id;
+                    ui.memory_mut(|m| {
+                        m.set_focus_lock_filter(
+                            id,
+                            egui::EventFilter {
+                                vertical_arrows: true,
+                                horizontal_arrows: true,
+                                ..Default::default()
+                            },
+                        )
+                    });
                     let (up, down) = ui.input_mut(|i| {
                         (
                             i.consume_key(egui::Modifiers::NONE, Key::ArrowUp),
