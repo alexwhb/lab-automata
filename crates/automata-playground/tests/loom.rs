@@ -274,6 +274,17 @@ fn fabric_matches_the_engine() {
     assert!(has_label_containing(&h, "72 of 72 rows woven"));
 }
 
+/// Like the real app (autoplay on), the Loom starts weaving when first shown.
+#[test]
+fn autoplay_weaves_on_enter() {
+    let mut h = app().at(Route::Loom).autoplay().build();
+    assert!(loom(&h).running());
+    get(&h, "Pause", Role::Button);
+    let c = loom(&h).row_count();
+    h.run_steps(3);
+    assert!(loom(&h).row_count() > c, "weaving");
+}
+
 /// New thread starts over at row 1.
 #[test]
 fn new_thread_restarts() {

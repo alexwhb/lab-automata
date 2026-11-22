@@ -261,6 +261,17 @@ fn running_changes_populations_and_liveliness() {
     assert!(!terr(&h).running());
 }
 
+/// Like the real app (autoplay on), the jars start running when first shown.
+#[test]
+fn autoplay_runs_on_enter() {
+    let mut h = app().at(Route::Terrarium).autoplay().build();
+    assert!(terr(&h).running());
+    get(&h, "Pause", Role::Button);
+    let before = populations(&h);
+    h.run_steps(4);
+    assert_ne!(populations(&h), before);
+}
+
 // ---- hand-offs and Share (NAV-4, TERR-4) ----------------------------------------------------
 
 /// Plant in the Tray / Analyse in Rule lab carry the first kept jar's rule (or jar 1's).
