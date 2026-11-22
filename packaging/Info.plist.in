@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Info.plist template for "Automata Playground.app"; scripts/bundle-macos.sh fills in
+     @VERSION@ (the automata-playground crate version), @BUILD@ (a build number: commits on
+     this branch, so newer builds compare higher); scripts/check-bundle.sh checks the keys. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>Automata Playground</string>
+  <key>CFBundleDisplayName</key><string>Automata Playground</string>
+  <key>CFBundleIdentifier</key><string>dev.labseries.AutomataPlayground</string>
+  <key>CFBundleExecutable</key><string>automata-playground</string>
+  <key>CFBundleIconFile</key><string>Automata Playground</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleSignature</key><string>????</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleVersion</key><string>@BUILD@</string>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.education</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+  <key>NSRequiresAquaSystemAppearance</key><false/>
+  <key>NSHumanReadableCopyright</key><string>Automata Playground @VERSION@ — a cellular-automata playground and rule lab.</string>
+
+  <!-- Life pattern files are not ours to define, so they are imported type declarations:
+       Golly / LifeWiki run-length encoded patterns (.rle) and plaintext patterns (.cells). -->
+  <key>UTImportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key><string>dev.labseries.life-pattern.rle</string>
+      <key>UTTypeDescription</key><string>Life Pattern (RLE)</string>
+      <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
+      <key>UTTypeIconFile</key><string>Automata Playground</string>
+      <key>UTTypeTagSpecification</key>
+      <dict><key>public.filename-extension</key><array><string>rle</string></array></dict>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key><string>dev.labseries.life-pattern.cells</string>
+      <key>UTTypeDescription</key><string>Life Pattern (Plaintext)</string>
+      <key>UTTypeConformsTo</key><array><string>public.plain-text</string></array>
+      <key>UTTypeIconFile</key><string>Automata Playground</string>
+      <key>UTTypeTagSpecification</key>
+      <dict><key>public.filename-extension</key><array><string>cells</string></array></dict>
+    </dict>
+  </array>
+
+  <!-- Finder "Open With", a drop on the Dock icon and `open -a` hand these to the app, which
+       arms the pattern as a stamp on the Tray (TRAY-9). Viewer + Default: the app imports the
+       file rather than editing it in place, and an app that owns the format keeps priority. -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Life Pattern (RLE)</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Default</string>
+      <key>LSItemContentTypes</key><array><string>dev.labseries.life-pattern.rle</string></array>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key><string>Life Pattern (Plaintext)</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>LSHandlerRank</key><string>Default</string>
+      <key>LSItemContentTypes</key><array><string>dev.labseries.life-pattern.cells</string></array>
+    </dict>
+  </array>
+</dict>
+</plist>
