@@ -14,12 +14,16 @@ lab-series/
                                perspective projection with inverse hit-testing, floor, tray,
                                loom fabric + print head + keys, jars, top-down grid
     crates/automata-playground the egui app: header, router, widgets, five screens, MCP bridge
+    crates/ap-shared           UI-free vocabulary shared by the app and ap-mcp: identity, screens,
+                               bridge socket, Automata bridge methods + payloads, pattern / rule input
     crates/ap-mcp              the MCP server binary `automata-mcp`
     tests/e2e  (optional)      headless scenarios across crates
 ```
 
 Dependency direction: `ap-theme` ← `ap-bench` ← app → `ap-engine`. `ap-engine` and `ap-bench`
-never depend on each other: screens adapt engine state into bench scene inputs.
+never depend on each other: screens adapt engine state into bench scene inputs. MCP: app →
+`ap-shared` → `ap-engine` + `lab-mcp`; `ap-mcp` → `ap-shared`, `ap-engine`, `lab-mcp` (never the
+app or egui; its tests use the app as a dev-dependency).
 
 ## `ap-engine` contract
 
@@ -197,7 +201,7 @@ fills in. The rustdoc is the reference (`cargo doc -p automata-playground --open
 | `launcher.rs` | `AppId { Breadbox, Chem, Bio, Automata }` (identity, switcher label, bundle id, availability, tag) and the injectable `Launcher` (`system()`: Spotlight by bundle id → `/Applications` → `../<repo>/dist/*.app`, then `open`; `recording(&[installed])` for tests; `from_fn`). Bundle ids: Breadbox `app.breadbox.Breadbox`, Chem `dev.labseries.ChemPlayground`; Bio is planned. |
 | `layout.rs` | `Column` specs (`aside`, `readout`, `main` + `flex` / `max` / `pad` / `gap` / borders / `scroll`), `resolve()` (lab-ui flex maths + `max-width`), `columns()` (lays out a page row: side by side they fill the window under the header, stacked each is `route.panel_height()` and the page scrolls), `stage()` (`.graph`), `bench()` (tab row + stage for a Playground screen) |
 | `widgets/` | the mockup's components (catalogue in `widgets/mod.rs`): `header` (NAV-1/3), `tabs::bench_tabs` (NAV-2), `Button` (`ghost` / `prim` / `.big`), `SegGroup` (`.seg` header / tool, `.mini` wells), `MiniButton`, `Toggle` (`.tog`), `Keep` (`.keep`), `Bit` / `BitRow` (Tray / Rule lab), `NbGrid`, `Cartridge`, `StampTile`, `Preset`, `lbl` / `lbl_colored`, `Card` (`series()` / `panel()`), `StatTile`, `Callout`, `verdict`, `Chip`, `CodeBlock`, `Slider`, `Plot` (`sparkline` / `series`, stable band, playhead), `CellGlyph`, `Icon` (every mockup icon from its SVG path data), `Toasts`, `counter`, `hit` (44 px targets, tiled within dense groups), `flow` (wrapping bar layout), `text` (CSS line boxes, wrapped text), `gallery` |
-| `control.rs` (MCP wave, not yet) | answers lab-mcp bridge requests each frame (status, navigate, screenshot, describe + Automata methods); `AppOptions::mcp_socket` is the hook, `Screen::describe` the text |
+| `control.rs` | the app side of the MCP bridge: answers lab-mcp bridge requests at the start of each frame (status, navigate, screenshot, describe + the Automata `tray.*` / `loom.*` / `terrarium.*` / `lab.*` methods on the screens' control APIs); `AppOptions::mcp_socket` (default: the shared socket; `None` in tests and smoke), `App::logic` for hidden windows, `Screen::describe` the summary. See § MCP |
 | `screens/` | `Screen` trait, `Screens` (all states, kept alive across navigation); `series.rs` (complete); `tray.rs`, `loom.rs`, `terrarium.rs`, `rule_lab.rs` (placeholders: page frame, header / tab-row actions, keyboard hooks — wave 2 replaces them) |
 
 ### How a screen plugs in
@@ -392,9 +396,48 @@ it. The first `enter` seeds the jars from `ctx.rng_seed()` unless the API change
 
 ## MCP
 
-`automata-mcp` (crate `ap-mcp`) follows `../chem-playground/crates/chem-mcp`: engine tools run
-in-process; app tools forward to the running app over `lab_mcp::bridge` (socket path from
-`AUTOMATA_MCP_SOCKET`, default under the user's runtime dir).
+`automata-mcp` (crate `ap-mcp`, `crates/ap-mcp/README.md`) follows
+`../chem-playground/crates/chem-mcp`: a `lab_mcp::mcp::ToolRegistry` served on stdio
+(`--socket`, `--help`, `--version`; logs on stderr). Engine tools run `ap-engine` in-process;
+app tools forward to the running app over `lab_mcp::bridge`, one connection per call.
+
+- **Socket**: `ap_shared::bridge_socket_path()` = `$AUTOMATA_MCP_SOCKET` (empty / `off`: no
+  bridge), else `lab_mcp::bridge::default_socket_path(APP_ID)`
+  (`~/Library/Application Support/dev.labseries.AutomataPlayground/mcp.sock`). Both the app
+  (`AppOptions::default().mcp_socket`) and the server use it. `automata-playground --no-mcp`
+  turns the app's bridge off; `AppOptions::test()` and the smoke run have none; tests pass a
+  temp socket. A second instance (socket already owned) or a bad path logs "MCP bridge off" and
+  runs without a bridge.
+- **`ap-shared`** (no egui): `APP_NAME`, `APP_ID`, `SOCKET_ENV`, `HOW_TO_START`; `SCREENS` /
+  `MODES` (ids `tray`, `loom`, `terrarium`, `rule-lab`, `series`; modes `playground`,
+  `advanced`; `tests/mcp_bridge.rs` checks they equal `Route::ALL`); `proto` (the Automata
+  bridge methods, their param structs — `deny_unknown_fields`, `show` defaulting to true — and
+  result structs `TrayState`, `LoomState`, `TerrariumState`, `LabState`, plus `SpecInfo`,
+  `ReportInfo`, `RuleInfo`, `NeighbourhoodInfo` built `From` engine types, `sample_series`);
+  `input` (`pattern_input`: stamp id / name, RLE or plaintext; `rule_input`: rulestring or
+  name; `stamp`, `named_rule`) so the app and the server accept the same text.
+- **Engine tools**: `run_life`, `analyze_rule`, `elementary`, `parse_rule`, `parse_pattern`,
+  `list_presets`, `rule_script` (limits: `run_life` ≤ 256 × 256, ≤ 10 000 gens, ≤ 2·10⁸
+  cell-generations; `analyze_rule` the engine's 256 / 2000; `elementary` ≤ 65 536 cells).
+- **App tools**: `app_status`, `list_screens` (offline, plus `current`), `navigate`,
+  `screenshot`, `describe_screen`, and per screen `tray_get` / `tray_set_rule` /
+  `tray_load_pattern` / `tray_control`, `loom_get` / `loom_set`, `terrarium_get` /
+  `terrarium_keep` / `terrarium_breed`, `lab_get` / `lab_set_script` / `lab_scrub`, which
+  forward their arguments unchanged as the params of `tray.get` … `lab.scrub`.
+- **App side** (`control.rs`): `poll` runs first thing in `AutomataApp::frame` (a navigation or
+  change shows in the same frame); `logic` (`App::logic`) queues requests while the window is
+  hidden and sends `RequestPaintWhileHidden`; the bridge's waker repaints an idle app.
+  Screenshots: `ViewportCommand::Screenshot`, PNG-encoded on a worker thread, after 2 settle
+  frames when navigating. Describe: the AccessKit tree caught by an egui plugin at the end of a
+  frame, flattened to `AccessNode`s, plus `summary` = the screen's `Screen::describe()`. Screen
+  methods check their params first (bad ones change nothing: `INVALID_PARAMS` with a message
+  for the model), then `prepare` the screen — `AutomataApp::enter_screen` runs its `enter` once
+  so first-visit set-up (autoplay, the Terrarium's seeded soups) can't undo the change later —
+  switch to it when `show`, call its control API (§ "Screen control API") and reply with its
+  state.
+- **Tests**: `crates/ap-mcp/tests/e2e.rs` spawns the real binary and drives the real app in
+  egui_kittest on a temp socket; `crates/automata-playground/tests/mcp_bridge.rs` drives
+  `control.rs` with a `BridgeClient`.
 
 ## Packaging and `test-all`
 
