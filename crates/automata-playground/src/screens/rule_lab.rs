@@ -94,7 +94,6 @@ pub struct State {
     editor_focused: bool,
     export_open: bool,
     export_focus: bool,
-    export_anchor: Option<Rect>,
 }
 
 // ---- control API ---------------------------------------------------------------------------
@@ -217,14 +216,12 @@ impl Screen for State {
             self.export_focus = self.export_open && export.has_focus();
         }
         menu_button_state(ui, &export, self.export_open);
-        // the visual 32 px button inside its 44 px target
-        self.export_anchor = Some(Rect::from_center_size(
-            export.rect.center(),
-            vec2(export.rect.width(), t::size::BUTTON),
-        ));
-        if self.export_open
-            && let Some(anchor) = self.export_anchor
-        {
+        if self.export_open {
+            // under the visual 32 px button, not its 44 px target
+            let anchor = Rect::from_center_size(
+                export.rect.center(),
+                vec2(export.rect.width(), t::size::BUTTON),
+            );
             let out = Menu::new(
                 Id::unique("rule-lab-export"),
                 "Export",

@@ -704,3 +704,24 @@ fn keyboard() {
     settle(&mut h);
     assert_ne!(focused_label(&h).as_deref(), Some("Rule script"));
 }
+
+/// DONE-1: side by side with `RuleLab-1440.png` / `RuleLab-390.png` the renders stay close
+/// (mean channel difference; the references animate nothing on this screen, but their RLE is
+/// the mockup's own encoding, so a little difference remains).
+#[test]
+fn stays_close_to_the_mockup() {
+    let mut h = lab();
+    let img = render(&mut h);
+    let d = mean_diff(&img, &load(&mockup_png(Route::RuleLab, 1440)), None);
+    assert!(
+        d < 5.0,
+        "Rule lab drifted from its mockup at 1440: mean |Δ| = {d:.2}"
+    );
+    let reference = load(&mockup_png(Route::RuleLab, 390));
+    let phone = render_full(Route::RuleLab, PHONE_W, reference.height() as f32);
+    let d = mean_diff(&phone, &reference, None);
+    assert!(
+        d < 6.5,
+        "Rule lab drifted from its mockup at 390: mean |Δ| = {d:.2}"
+    );
+}
