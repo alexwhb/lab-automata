@@ -23,40 +23,109 @@ never depend on each other: screens adapt engine state into bench scene inputs.
 
 ## `ap-engine` contract
 
-The engine agent owns the exact names; this is the minimum surface the screens rely on. The
-rustdoc is the reference once it exists (`cargo doc -p ap-engine --open`). Keep this section in
-sync when you change a public API.
+Built (wave 1). The rustdoc is the reference (`cargo doc -p ap-engine --open`; every public
+item is documented, `#![warn(missing_docs)]`); this is the map. Everything commonly used is
+re-exported at the crate root (`use ap_engine::{Grid, LifeRule, …}`). No UI dependencies, only
+`thiserror`. Nothing panics on any input: parsers return errors with line numbers, edits ignore
+out-of-range coordinates and counts, sizes are clamped (grids 1–1024, runs 1–256 × 0–2000
+gens, weaves 1–4096).
 
-- **Rules**: `Neighbourhood` (offsets within 5 × 5, never (0,0); presets `Moore` "Moore r1"
-  key `moore`, `VonNeumann` "von Neumann" `vn`, `Hexagonal` "Hexagonal" `hex`, `Moore2`
-  "Moore r2" `moore2`; `preset()` recognises a custom set equal to a preset), `LifeRule`
-  (birth / survive count sets, neighbourhood; `parse`, `code()` canonical string, toggle
-  helpers, `with_neighbourhood` drops counts above N), `Boundary { Torus, Dead }`, the named
-  presets (the six Tray cartridges with name + note; the Terrarium names map incl. "2×2" and
-  "Move").
-- **Grid**: `w × h` cells with `age: u16` (0 = dead, 1 = newborn, saturating) and `trail: u8`
-  (0–3); `step(&rule, boundary) -> StepStats { born, died, population }` implementing exactly
-  the Tray mockup's `advance()` (new age = old + 1 on survival; trail = 3 on death, else
-  max(0, t − 1); trail 0 while alive); set / toggle / clear; `place(&Pattern, x, y, anchor)`
-  wrapping on torus, clipping on dead; population; bounding box; cheap clone.
-- **Patterns**: `Pattern` (w, h, live cells); `library` with the eight stamps (`id`, display
-  name, cells — the mockup's `P` table); `rle::parse` / `rle::write`; `cells::parse`
-  (plaintext). `Pattern::from_grid_region`.
-- **Elementary**: `Elementary` rule u8; `next_row(&[bool]) -> Vec<bool>` (wraps); `Weave`
-  state (width 121, keep last 72 rows, total row count, start Single / Random(seed)); the six
-  famous threads (number, name, note).
-- **Analysis**: `RunSpec { rule, boundary, w, h, seed: Seed, gens }`, `Seed { RPentomino,
-  Acorn, Soup { seed, density } }` placed as the Rule lab mockup does (R-pentomino at (31,19),
-  acorn at (29,19), soup = the mockup LCG in f64 inside x∈(16,48), y∈(8,32));
-  `run(&spec) -> Run` with every frame (bitsets), populations, `first_repeat: Option<Repeat {
-  start, period }>`; `Report { peak, peak_gen, final_pop, first_repeat_gen, period, verdict }`.
-- **Mood**: `Mood::classify(&history) -> Mood` with `title()` / `text()` (Tray mockup logic).
-- **Breeding**: `Rng` (seeded, deterministic), `Jar` (32 × 32 torus, rule, soup, activity
-  window of 12, `tick()`, `liveliness()`, `population()`), `breed(parents, mutation, kept, rng)`
-  per TERR-2, `Lineage`.
-- **Script**: `RuleScript { name, rule, neighbourhood key, w, h, boundary, seed, gens, probes }`
-  with `parse(&str) -> Result<RuleScript, Vec<ScriptError { line, message }>>` and
-  `to_text()` (exact mockup format).
+- **`rule`** — `Neighbourhood` (24-bit mask of offsets in the 5 × 5 square, never (0,0); `Copy`,
+  `Eq`, `Hash`): consts `MOORE`, `VON_NEUMANN`, `HEXAGONAL`, `MOORE2`, `empty()`,
+  `from_offsets(iter) -> Result<_, NeighbourhoodError>`, `contains/set/toggle(dx, dy)`, `len()`,
+  `offsets()` (row-major), `radius()`, `preset() -> Option<NeighbourhoodPreset>` (recognises a
+  custom set equal to a preset), `key()` (`moore`/`vn`/`hex`/`moore2`/`custom`), `name()`
+  ("Moore r1" … or "Custom (N cells)"). `NeighbourhoodPreset { Moore, VonNeumann, Hexagonal,
+  Moore2 }` with `ALL`, `key()`, `name()`, `neighbourhood()`, `from_key()`. `CountSet` (counts
+  0–24; `of(&[..])`, `contains`, `set`, `toggle`, `iter`, `len`, `max`, `up_to`).
+  `LifeRule { birth, survive, neighbourhood }` (`Copy`, `Eq`, `Hash`; counts never exceed N):
+  `LIFE`, `new(b, s, nb)`, `moore(&[b], &[s])`, `parse(text)` (Moore) / `parse_with(text, nb)`
+  → `Result<_, RuleParseError>` (`B3/S23`, `b3s23`, `B3/S23/`, `S23/B3`, `23/3`, Golly `:T…`
+  suffix ignored; comma mode `B3,10/S2,3`), `code()` canonical (`Display` / `FromStr` too),
+  `born_with(n)`, `survives_with(n)`, `set_birth/set_survive/toggle_birth/toggle_survive(n)`
+  (no-op above N), `with_neighbourhood(nb)` / `set_neighbourhood(nb)` (drop counts > N, as the
+  Rule lab does), `toggle_neighbour(dx, dy)` (the 5 × 5 editor's click). `Boundary { Torus,
+  Dead }` with `ALL`, `key()` (`torus`/`dead`), `label()` ("Torus"/"Dead edge"),
+  `description()` ("wraps at edges"/"dead edges"), `from_key()`.
+- **`presets`** — `Cartridge { id, name, note, rule }`, `CARTRIDGES` (the Tray's six),
+  `cartridge(id)`, `matching_cartridge(&rule)` (the lit cartridge, `None` = "Custom rule");
+  `NAMED` (the Terrarium names map incl. "2×2", "Move"), `rule_name(&rule) -> Option<&str>`;
+  `TERRARIUM_START`; `TRAY_W` (40), `TRAY_H` (26), `TRAY_BOUNDARY` (torus),
+  `starting_garden() -> Grid` (gun at (1,1) + pulsar at (26,12); run it with `LifeRule::LIFE`).
+- **`grid`** — `Grid` (`Clone`, `Eq`): `new(w, h)`, `random(w, h, density, &mut Rng)`,
+  `width/height/len`, `age(x, y) -> u16` (0 dead, 1 newborn, +1 per survived gen, saturating),
+  `trail(x, y) -> u8` (3 on death, −1 per gen, 0 while alive), `is_alive`, `cell_state(x, y) ->
+  CellState { Empty, Trail(1..=3), Newborn, Alive, Elder }` (TRAY-2; `ELDER_AGE` = 10),
+  `ages()`, `trails()`, `set(x, y, alive)` (alive = newborn, like Draw), `toggle(x, y) ->
+  Option<bool>`, `clear()`, `clear_trails()`, `population()`, `alive_cells()`, `bbox() ->
+  Option<BBox { x, y, w, h }>`, `place(&Pattern, x: i64, y: i64, Anchor::{TopLeft, Center},
+  boundary) -> usize` (Center = top-left at (x − ⌊w/2⌋, y − ⌊h/2⌋); wraps on torus, clips on
+  dead), `step(&rule, boundary) -> StepStats { born, died, population }` (exactly the Tray
+  mockup's `advance()`; branch-free shifted-plane counting, any neighbourhood).
+- **`pattern`** — `Pattern` (w × h + sorted live cells; `new`, `from_rows(&["..O", …])`,
+  `from_grid(&grid)` (bbox-trimmed), `from_grid_region(&grid, x, y, w, h)`, `width/height/cells/
+  population/contains`, `trimmed()`, `to_rows()`). `PatternFile { pattern, name, author,
+  comments, rule: Option<String> }` with `life_rule()`. `PatternError { line, message }`.
+  `library::{Stamp { id, name, rows }, STAMPS, stamp(id), pattern(id)}` — the eight stamps
+  verbatim (`glider`, `lwss` "Spaceship", `pulsar`, `penta` "Pentadecathlon", `rpent`
+  "R-pentomino", `acorn`, `gun` "Glider gun", `rep` "Replicator"). `rle::parse(text) ->
+  Result<PatternFile, _>`, `rle::write(&pattern, Option<&LifeRule>, Option<name>) -> String`
+  (standard, `n$` runs, ≤ 70-column body lines), `rle::write_file(&PatternFile)`,
+  `rle::is_header`. `cells::parse` / `cells::write` (plaintext). `parse_any(text)` (detects RLE
+  vs plaintext, for paste), `parse_file(file_name, text)` (for drop), `detect(text) -> Format`.
+- **`elementary`** — `Elementary(u8)`: `output(l, c, r)`, `output_for(p)`, `toggled(p)` (a key
+  press), `next_row(&[bool]) -> Vec<bool>` (wraps), `binary()`, `blurb()`, `famous()`; free
+  `next_row(rule, row)`, `key_pattern(p) -> [bool; 3]`, `FAMOUS` (`FamousThread { rule, name,
+  note }` × 6), `famous(rule)`, `blurb(rule)` ("Chaos · Random-looking" / "Uncharted rule").
+  `Weave` (`LOOM_WIDTH` 121, `LOOM_ROWS` 72): `new(rule, WeaveStart::{Single, Random(seed)})`,
+  `with_size(width, keep, rule, start)`, `weave() -> &[bool]`, `rows()` (oldest first),
+  `newest()`, `len()`, `count()` (rows since start incl. the first: the `row 0000` counter),
+  `progress()` (0–1), `set_rule` / `set_start` / `restart` (all restart the thread),
+  `rows_text(alive, dead)`, `share_text()` ("Rule N" + rows as `#`/`.`).
+- **`analysis`** — `RunSpec { rule, boundary, w, h, seed, gens }` (`Default` = the mockup: Life,
+  torus, `LAB_W` 64 × `LAB_H` 40, R-pentomino, `LAB_GENS` 400), `validate() -> Result<(),
+  SpecError>`, `clamped()`. `Seed { RPentomino, Acorn, Soup { seed: u32, density: f64 } }`
+  (`MOCKUP_SOUP` = seed 7 / 0.33; `key()`, `label()`, `centre(w, h)`, `grid(w, h, boundary)`):
+  stamps centred at (⌊w/2⌋, ⌊h/2⌋) = the mockup's (31,19) / (29,19); soup = `js_lcg_next` (the
+  mockup LCG in f64, rounding like JavaScript) in w/4 < x < 3w/4, h/5 < y < 4h/5 (`soup_grid`).
+  `run(&spec) -> Run` (clamped spec): `frames()` / `frame(g) -> Option<&Frame>` (bitsets:
+  `get`, `population`, `alive_cells`, `to_pattern`, `trimmed_pattern`, `to_grid`),
+  `populations()`, `population(g)`, `first_repeat() -> Option<Repeat { start, period }>` (exact:
+  hash then full compare; `seen_at()` = start + period), `cell(g, x, y) -> CellChange { Empty,
+  Born, Alive, Ghost }` (top-down view), `pattern(g)`, `rle(g)` (full RLE with `rule =`),
+  `report() -> Report { peak, peak_gen, final_pop, first_repeat, first_repeat_gen, period,
+  extinct_gen, verdict }` with `peak_text()` ("221 @ 148"), `first_repeat_text()` ("gen 390" /
+  "none"), `period_text()` ("2" / "—").
+- **`mood`** — `Mood { Extinct, Settled, Oscillating, Booming, Collapsing, Churning }`:
+  `classify(&[usize])` (the Tray mockup's classifier verbatim), `title()`, `text()`. `History`
+  (last `HISTORY_LEN` = 120 populations): `new(pop)`, `push(pop)` (after a step),
+  `replace_last(pop)` (after an edit), `reset(pop)`, `values()`, `latest()`, `scale_max()`
+  (≥ 10, the sparkline's scale), `mood()`.
+- **`breed`** — `Jar` (32 × 32 torus, Moore): `new(rule, &mut Rng)` (soup 0.38 in 5 < x,y < 26),
+  `reseed`, `tick() -> f64` (changed fraction), `activity()` (last 12), `liveliness()`
+  (min(1, mean × 6)), `population()`, `grid()`, `rule()`, `name()` (or "Mutant").
+  `Liveliness::of(v) -> { Quiet (< .08), Lively, Frantic (> .8) }` (meter colour).
+  `child(parents, mutation, &mut Rng) -> LifeRule`, `breed(rules, kept, mutation, &mut Rng) ->
+  Brood { rules, parents }` (TERR-2). `Lineage` (`push`, `newest_first()`, `len`, `is_empty`;
+  last 8) of `LineageEntry { brood, parents: Vec<String> }`. `Terrarium` (the whole bench,
+  seeded): `new(seed)`, `with_rules(&rules, seed)`, `jars()`, `jar(i)`, `toggle_keep(i)`,
+  `is_kept(i)`, `kept()`, `tick()`, `reseed()`, `breed()`, `brood()`, `lineage()`,
+  `mutation()` / `set_mutation(1..=4)`, `parents()`, `breed_label()` ("Breed brood N+1"),
+  `keep_note()`, `chosen_rule()` (NAV-4: first kept jar, else jar 1), `share_text()`.
+- **`script`** — `RuleScript { name, rule, w, h, boundary, seed, gens, probes: Vec<Probe {
+  quantity: ProbeQuantity, target }> }`: `Default` (the mockup's script), `from_spec(name,
+  &spec)`, `spec() -> RunSpec`, `set_spec(&spec)`, `to_text()` (exactly the mockup's format, no
+  trailing newline), `parse(text) -> Result<RuleScript, Vec<ScriptError { line, message }>>`
+  (lenient spacing/case, `*` comments, all errors with lines, sorted; `.rule .neigh .grid .seed
+  .run` required, `.probe` / `.end` optional). Custom neighbourhoods print and parse as `.neigh
+  custom n=3 (0,-1) (-2,1) (2,2)`; stamp seeds always sit at the grid centre (`@ (x,y)`
+  optional, must be the centre). `parse(to_text(s)) == s` for every valid script.
+- **`rng`** — `Rng` (SplitMix64): `new(seed)`, `from_clock()`, `next_u64`, `next_f64`,
+  `below(n)`, `chance(p)`, `seed()`.
+
+Golden data (SPEC REF-2): `node scripts/mockup-goldens.mjs` runs each mockup's `class
+Component` verbatim (loaded from `docs/design/mockup/*.dc.html`) and writes
+`crates/ap-engine/tests/golden/*.json`; `tests/golden.rs` must match exactly.
 
 ## `ap-bench` contract
 
