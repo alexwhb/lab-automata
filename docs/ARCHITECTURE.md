@@ -316,6 +316,35 @@ draws the result.
 `load_pattern`; ⌘V (`Event::Paste`) and dropped `.rle` / `.cells` files arm the pattern as
 the custom stamp.
 
+#### Rule lab (`screens::rule_lab::State`)
+
+| method | |
+|---|---|
+| `script_text() -> String` | the editor's text as shown (may have errors) |
+| `set_script(&str) -> Result<(), Vec<ScriptError>>` | replaces the script: when it parses, the text becomes it and its spec takes effect (run synchronously); otherwise nothing changes and the line-numbered errors come back |
+| `errors() -> &[ScriptError]` | the editor text's errors (empty when it parses) |
+| `spec() -> RunSpec`, `script() -> &RuleScript` | the spec in effect: the last valid script's (with its name and probes) |
+| `set_rule(LifeRule)`, `set_spec(RunSpec)` | what the spec controls do: re-run (synchronously) and rewrite the script's changed directive lines |
+| `scrub(gen)`, `generation() -> usize`, `alive() -> usize` | the scrubbed generation (clamped to the run; pauses Play) and its population |
+| `report() -> Report` | peak, final, first repeat, period, verdict (LAB-3) |
+| `rle() -> String` | the scrubbed generation as RLE with `rule =`, untruncated (the panel shows the mockup's 420-character preview) |
+| `populations() -> &[usize]`, `lab() -> &Lab` | the run's populations; the GUI-free model (`screens::rule_lab::model::Lab`) |
+| `playing` (field), `Screen::describe` | Play / Pause; "Rule lab: B3/S23, Moore r1, wraps at edges; Top-down view of the grid, 64 by 40, generation 120, 148 alive; Settles into a period-2 cycle at gen 388." |
+
+Script ⇄ spec sync (LAB-4): typing applies the text whenever it parses and leaves it exactly
+as typed; while it doesn't parse, the errors are shown per line and the last valid spec stays
+in effect. The spec controls (and `set_rule` / `set_spec`) rewrite only the directive lines
+whose canonical form changed — for canonical text that is `RuleScript::to_text()`; comments,
+spacing and other lines stay, and the changed directive's own line is replaced even if it held
+an error. While the editor has keyboard focus and the text has errors, the text isn't touched;
+the patch is applied when focus leaves. Specs above 4 M cell-generations typed into the
+script run on a worker thread (the old run stays on screen; API calls wait for the result).
+
+`receive(Carry)` (NAV-4) parses the rule (Moore) and re-runs. "Open in Playground" sends
+`Carry { rule: <code>, rle: Some(rle()) }` to the Tray. Export: Copy RLE, Copy script, Save
+`<stem>.rle`, Save `<stem>.rule` (`<stem>` from the script's name, `glider-garden`; the script
+exported is the text when it parses, else the last valid script).
+
 ## MCP
 
 `automata-mcp` (crate `ap-mcp`) follows `../chem-playground/crates/chem-mcp`: engine tools run
