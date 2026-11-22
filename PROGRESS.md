@@ -152,6 +152,12 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   Boundary well → "Seed", the cards in the spec aside). The Rule lab adds the gap back by hand
   (`rule_lab::gap()`, and a `scope_builder` group instead of `Card::label`). If you make those
   widgets keep the parent's spacing, drop those calls (or tell rulelab) to avoid double gaps.
+  **Done (qa, 307ff9d)**: the block widgets end with `advance_cursor_after_rect`, so a
+  column's gap works like CSS `gap` after them (test `block_widgets_keep_the_column_gap`);
+  `rule_lab::gap()` is gone and the spec cards use `Card::label`. Tray / Loom / Terrarium /
+  Series lost their compensations; renders were pixel-identical. The Tray aside's remaining
+  2 px drift came from the sparkline (the svg's 1 px border: `Plot` heights are now the
+  content box + 2) and stat tiles (CSS line boxes).
 - **rulelab → lead (widgets, look)**: `MiniButton` grows to its wrapped label's height (30 px
   for "von Neumann"); CSS keeps `.mini` at `height: 28px` and lets the text overflow, so the
   Hexagonal / Moore r2 presets sit 2 px lower than in `RuleLab-1440.png`.
@@ -175,18 +181,28 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   `ScrollArea` while their content fits the panel, or re-issue `ui.scroll_to_rect(rect)` on
   the page for the focused widget after the body is drawn. Until then `tests/{loom,terrarium}.rs`
   click at 390 in a window as tall as the page (`phone_full`).
+  **Done (qa, 36eda9e, 9b29912)**: stacked, a scroll column has no `ScrollArea` of its own
+  and its line grows to the content instead; `widgets::reveal_on_focus` scrolls a control that
+  gains keyboard focus into view; `layout::bubble_scroll` passes the Terrarium jar stage's own
+  scrolling on to the page. `phone_full` is gone (390 × 1000 windows); covered by
+  `journeys::phone_focus_scrolls_the_page`.
 - **loomterr → lead (tab row, look)**: at 390 the bench tab row is ≈ 13 px taller than in the
   references when the hint wraps (Loom-390: hint at y ≈ 303 vs 296, stage from ≈ 318 vs 305):
   the wrapped item gets a taller line than the 15 px hint. The Loom's key grid zooms to fit
   the stage, so nothing is clipped, just 13 px lower than the reference.
+  **Done (qa, 36eda9e)**: slot items measured in a vertically centred frame, which egui
+  stretches to the row (28 px); they now measure top-aligned and `flow` centres them.
 - **loomterr → lead (FYI, harness)**: `common::child_labels` reads `accesskit_node().label()`,
   but egui puts a `Role::Label`'s text in `value()` (label is `None`), so it returns `""` for
   labels (buttons are fine). `tests/terrarium.rs` reads `value()` directly; consider
   `label().or(value())` in the helper.
+  **Done (qa, 36eda9e)**: `common::text_of` (label or value); `child_labels` uses it and
+  `tests/terrarium.rs` too.
 - **loomterr (FYI, widgets)**: like rulelab, the Loom / Terrarium asides add the column gap
   back by hand after `advance_block` widgets (`SegGroup` → Speed, lineage rows). If those
   widgets start keeping the parent's spacing, drop the `add_space` calls in
   `screens/loom/aside.rs` and `screens/terrarium/aside.rs` (or tell loomterr).
+  **Done (qa, 307ff9d)**: both `add_space` calls are gone (see the rulelab entry).
 - **loomterr (decision, Terrarium)**: the jars bob only while running (the mockup's CSS bob
   never stops), so a paused Terrarium doesn't repaint every frame; the loom spools stop when
   paused as the mockup says. One line to change in `terrarium.rs::tick` if the lead prefers
