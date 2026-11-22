@@ -1,17 +1,18 @@
-//! Side-by-side `[app | mockup]` images of every screen, for human and agent review (not a
-//! pixel-diff gate). Run through `scripts/compare-mockup.sh`, which sets `AP_COMPARE=1`;
-//! without it the render test does nothing.
+//! Side-by-side `[app | mockup]` images of every screen, for human and agent review, run
+//! through `scripts/compare-mockup.sh` (which sets `AP_COMPARE=1`; without it that test does
+//! nothing), plus the closeness bounds and the README's screenshots.
 //!
 //! For each route it renders the app at the mockup's board size (`Route::board_size`; the
 //! Series screen gets the header on top of its 640 px board, which the mockup leaves out) and
 //! at 390 px wide (as tall as the reference or the app's content, whichever is taller), in
 //! the reference's state (the Tray running at gen 30, the Loom weaving at row 47, the
-//! Terrarium running), puts the reference from `docs/design/screenshots/` next to it and
-//! writes `target/compare/<Screen>-1440.png` / `<Screen>-390.png`.
+//! Terrarium's jars ticked and running), puts the reference from `docs/design/screenshots/`
+//! next to it and writes `target/compare/<Screen>-1440.png` / `<Screen>-390.png`.
 //! `AP_COMPARE_ONLY=series,tray` limits it to some routes.
 //!
 //! `screens_stay_close_to_their_mockups` always runs: the mean channel difference of each
 //! screen's stable regions (header, asides, deterministic benches) must stay under its bound.
+//! `readme_screenshots` writes `docs/screenshots/*.png` with `AP_SCREENSHOTS=1`.
 
 mod common;
 
@@ -44,8 +45,8 @@ fn wanted(route: Route) -> bool {
 
 /// Puts an app on `route` into the state its reference shows, ending on one running frame:
 /// the Tray at gen 30 (REF-2's numbers in the readouts), the Loom weaving rule 30 at row 47
-/// (the same fabric), the Terrarium running. The Rule lab and the Series open in their
-/// reference state.
+/// (the same fabric), the Terrarium's jars 30 ticks in and running. The Rule lab and the
+/// Series open in their reference state.
 fn mockup_state(app: &mut App, route: Route) {
     let screens = app.state_mut().screens_mut();
     match route {
@@ -57,7 +58,10 @@ fn mockup_state(app: &mut App, route: Route) {
             screens.loom.step_n(45);
             screens.loom.set_running(true);
         }
-        Route::Terrarium => screens.terrarium.set_running(true),
+        Route::Terrarium => {
+            screens.terrarium.tick_n(30);
+            screens.terrarium.set_running(true);
+        }
         Route::RuleLab | Route::Series => {}
     }
     // one 0.1 s frame: one generation at 10 gen/s, one row at 14 rows/s from a fresh ticker
@@ -239,4 +243,23 @@ fn screens_stay_close_to_their_mockups() {
         failures.is_empty(),
         "drifted from the mockup: {failures:#?}"
     );
+}
+
+/// The README's screenshots: every screen at 1440 in its reference's state, written to
+/// `docs/screenshots/<screen>.png` when `AP_SCREENSHOTS=1` (`scripts/screenshots.sh`).
+#[test]
+fn readme_screenshots() {
+    if std::env::var_os("AP_SCREENSHOTS").is_none_or(|v| v != "1") {
+        eprintln!("screenshots: skipped (run scripts/screenshots.sh or set AP_SCREENSHOTS=1)");
+        return;
+    }
+    let dir = repo().join("docs/screenshots");
+    for route in Route::ALL {
+        let (w, h) = route.board_size();
+        let extra = if route == Route::Series { 57.0 } else { 0.0 };
+        let img = render_like_mockup(route, w, h + extra);
+        let path = dir.join(format!("{}.png", route.id()));
+        save(&img, &path);
+        println!("screenshot: {}", path.display());
+    }
 }
