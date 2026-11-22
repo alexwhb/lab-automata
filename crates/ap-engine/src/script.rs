@@ -821,13 +821,23 @@ fn parse_pair(arg: &str) -> Option<(i64, i64)> {
 fn tokens(line: &str) -> Vec<String> {
     let spaced = line.replace("->", " -> ").replace('@', " @ ");
     let chars: Vec<char> = spaced.chars().collect();
+    // The first non-whitespace character after each position, found in one backward pass (a
+    // forward look-ahead per whitespace character was quadratic in long whitespace runs).
+    let mut next_solid = vec![None; chars.len()];
+    let mut ahead = None;
+    for (i, &c) in chars.iter().enumerate().rev() {
+        next_solid[i] = ahead;
+        if !c.is_whitespace() {
+            ahead = Some(c);
+        }
+    }
     let mut out = Vec::new();
     let mut cur = String::new();
     let mut depth = 0usize;
     for (i, &c) in chars.iter().enumerate() {
         if c.is_whitespace() {
-            let next = chars[i + 1..].iter().find(|c| !c.is_whitespace());
-            if depth > 0 || cur.ends_with('=') || next == Some(&'=') {
+            let next = next_solid[i];
+            if depth > 0 || cur.ends_with('=') || next == Some('=') {
                 continue;
             }
             if !cur.is_empty() {
