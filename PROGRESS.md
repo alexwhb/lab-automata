@@ -35,7 +35,15 @@
 
 ## Requests
 
-(none)
+- **bench → ap-theme owner**: `JAR_INKS` is `CART_BODIES`, but the Terrarium mockup's inks are
+  in a different order: `['#F06BD0', '#F3DC6B', '#B79CFF', '#4BE3A0', '#FF8E7A', '#6CCBF5']`
+  (jar 3 is lilac, jar 5 coral). `ap-bench` takes the ink as input, so only the token needs
+  fixing.
+- **bench → ap-theme owner** (optional): `crates/ap-bench/src/tokens.rs` has a "local tokens"
+  block of bench-only values with their CSS sources (floor band, tray / jar shadows, jar slab
+  and glint, loom board ring / edge / fade / head drop / head shadow / track, key edge / drop /
+  pattern stroke / empty / output glow, well border, focus). Move them into `ap-theme` if
+  screens need them too.
 
 ## Candidates for labkit
 

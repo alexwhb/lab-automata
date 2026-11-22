@@ -99,7 +99,11 @@ impl View {
     /// Screen → stage CSS px.
     #[inline]
     pub fn to_stage(&self, p: Pos2) -> Pos2 {
-        let z = if self.zoom.abs() > 1e-6 { self.zoom } else { 1.0 };
+        let z = if self.zoom.abs() > 1e-6 {
+            self.zoom
+        } else {
+            1.0
+        };
         pos2((p.x - self.origin.x) / z, (p.y - self.origin.y) / z)
     }
 

@@ -120,7 +120,12 @@ impl Batch {
         let n32 = n as u32;
         for i in 0..n32 {
             let j = (i + 1) % n32;
-            let (ii, io, ji, jo) = (base + 2 * i, base + 2 * i + 1, base + 2 * j, base + 2 * j + 1);
+            let (ii, io, ji, jo) = (
+                base + 2 * i,
+                base + 2 * i + 1,
+                base + 2 * j,
+                base + 2 * j + 1,
+            );
             self.mesh.add_triangle(ii, io, jo);
             self.mesh.add_triangle(ii, jo, ji);
         }
@@ -287,7 +292,14 @@ impl Batch {
     }
 
     /// A stroke of `width` centred on an element-local rounded rect's outline (SVG `stroke`).
-    pub fn stroke_rrect(&mut self, p: &Projection, r: Rect, radii: Radii, width: f32, color: Color32) {
+    pub fn stroke_rrect(
+        &mut self,
+        p: &Projection,
+        r: Rect,
+        radii: Radii,
+        width: f32,
+        color: Color32,
+    ) {
         let h = width / 2.0;
         self.ring(
             p,
@@ -300,7 +312,14 @@ impl Batch {
     }
 
     /// A stroke of `width` centred on an element-local circle.
-    pub fn stroke_circle(&mut self, p: &Projection, center: Pos2, radius: f32, width: f32, color: Color32) {
+    pub fn stroke_circle(
+        &mut self,
+        p: &Projection,
+        center: Pos2,
+        radius: f32,
+        width: f32,
+        color: Color32,
+    ) {
         let r = Rect::from_center_size(center, Vec2::splat(2.0 * radius));
         self.stroke_rrect(p, r, self::radii(radius), width, color);
     }
@@ -362,19 +381,21 @@ impl Batch {
             self.fill_rect(p, r, color);
             return;
         }
-        let xs = blur_samples(r.left(), r.right(), sigma);
-        let ys = blur_samples(r.top(), r.bottom(), sigma);
-        let fx: Vec<f32> = xs.iter().map(|&x| box_profile(x, r.left(), r.right(), sigma)).collect();
-        let fy: Vec<f32> = ys.iter().map(|&y| box_profile(y, r.top(), r.bottom(), sigma)).collect();
+        let xs = BlurSamples::new(r.left(), r.right(), sigma);
+        let ys = BlurSamples::new(r.top(), r.bottom(), sigma);
+        let mut fx = [0.0f32; BlurSamples::MAX];
+        for (f, &x) in fx.iter_mut().zip(xs.as_slice()) {
+            *f = box_profile(x, r.left(), r.right(), sigma);
+        }
         let base = self.mesh.vertices.len() as u32;
-        for (j, &y) in ys.iter().enumerate() {
-            for (i, &x) in xs.iter().enumerate() {
-                let a = fx[i] * fy[j];
+        for &y in ys.as_slice() {
+            let fy = box_profile(y, r.top(), r.bottom(), sigma);
+            for (i, &x) in xs.as_slice().iter().enumerate() {
                 self.mesh
-                    .colored_vertex(p.project(pos2(x, y)), color.gamma_multiply(a));
+                    .colored_vertex(p.project(pos2(x, y)), color.gamma_multiply(fx[i] * fy));
             }
         }
-        add_grid_triangles(&mut self.mesh, base, xs.len(), ys.len());
+        add_grid_triangles(&mut self.mesh, base, xs.len, ys.len);
     }
 
     /// A Gaussian-blurred ellipse filling `r` (`border-radius: 50%; filter: blur(σ px)`), the
@@ -512,10 +533,26 @@ fn clamp_radii(r: Rect, radii: Radii) -> Radii {
 pub fn rrect_outline(r: Rect, radii: Radii, segments: usize, out: &mut Vec<Pos2>) {
     let radii = clamp_radii(r, radii);
     let corners = [
-        (pos2(r.left() + radii[0], r.top() + radii[0]), radii[0], 180.0f32),
-        (pos2(r.right() - radii[1], r.top() + radii[1]), radii[1], 270.0),
-        (pos2(r.right() - radii[2], r.bottom() - radii[2]), radii[2], 0.0),
-        (pos2(r.left() + radii[3], r.bottom() - radii[3]), radii[3], 90.0),
+        (
+            pos2(r.left() + radii[0], r.top() + radii[0]),
+            radii[0],
+            180.0f32,
+        ),
+        (
+            pos2(r.right() - radii[1], r.top() + radii[1]),
+            radii[1],
+            270.0,
+        ),
+        (
+            pos2(r.right() - radii[2], r.bottom() - radii[2]),
+            radii[2],
+            0.0,
+        ),
+        (
+            pos2(r.left() + radii[3], r.bottom() - radii[3]),
+            radii[3],
+            90.0,
+        ),
     ];
     for (c, rad, start) in corners {
         if rad <= 1e-3 {
@@ -534,10 +571,26 @@ pub fn rrect_outline(r: Rect, radii: Radii, segments: usize, out: &mut Vec<Pos2>
 fn rrect_outline_fixed(r: Rect, radii: Radii, segments: usize, out: &mut Vec<Pos2>) {
     let radii = clamp_radii(r, radii);
     let corners = [
-        (pos2(r.left() + radii[0], r.top() + radii[0]), radii[0], 180.0f32),
-        (pos2(r.right() - radii[1], r.top() + radii[1]), radii[1], 270.0),
-        (pos2(r.right() - radii[2], r.bottom() - radii[2]), radii[2], 0.0),
-        (pos2(r.left() + radii[3], r.bottom() - radii[3]), radii[3], 90.0),
+        (
+            pos2(r.left() + radii[0], r.top() + radii[0]),
+            radii[0],
+            180.0f32,
+        ),
+        (
+            pos2(r.right() - radii[1], r.top() + radii[1]),
+            radii[1],
+            270.0,
+        ),
+        (
+            pos2(r.right() - radii[2], r.bottom() - radii[2]),
+            radii[2],
+            0.0,
+        ),
+        (
+            pos2(r.left() + radii[3], r.bottom() - radii[3]),
+            radii[3],
+            90.0,
+        ),
     ];
     for (c, rad, start) in corners {
         for k in 0..=segments {
@@ -567,33 +620,55 @@ fn box_profile(x: f32, a: f32, b: f32, sigma: f32) -> f32 {
 }
 
 /// Sample positions along one axis of a blurred span `[a, b]`: dense near the edges, sparse
-/// in the flat interior, out to 3σ.
-fn blur_samples(a: f32, b: f32, sigma: f32) -> Vec<f32> {
-    const OUT: [f32; 5] = [3.0, 2.0, 1.25, 0.6, 0.0];
-    const IN: [f32; 3] = [0.6, 1.25, 2.2];
-    let mid = (a + b) / 2.0;
-    let mut v = Vec::with_capacity(17);
-    for k in OUT {
-        v.push(a - k * sigma);
+/// in the flat interior, out to 2.5σ (beyond it the shadow is < 1 % of its peak).
+struct BlurSamples {
+    v: [f32; BlurSamples::MAX],
+    len: usize,
+}
+
+impl BlurSamples {
+    const MAX: usize = 15;
+    const OUT: [f32; 5] = [2.5, 1.6, 0.9, 0.35, 0.0];
+    const IN: [f32; 2] = [0.7, 1.8];
+
+    fn new(a: f32, b: f32, sigma: f32) -> BlurSamples {
+        let mut s = BlurSamples {
+            v: [0.0; Self::MAX],
+            len: 0,
+        };
+        let mid = (a + b) / 2.0;
+        for k in Self::OUT {
+            s.push(a - k * sigma);
+        }
+        for k in Self::IN {
+            let x = a + k * sigma;
+            if x < mid - 0.5 * sigma {
+                s.push(x);
+            }
+        }
+        s.push(mid);
+        for k in Self::IN.iter().rev() {
+            let x = b - k * sigma;
+            if x > mid + 0.5 * sigma {
+                s.push(x);
+            }
+        }
+        for k in Self::OUT.iter().rev() {
+            s.push(b + k * sigma);
+        }
+        s
     }
-    for k in IN {
-        let x = a + k * sigma;
-        if x < mid - 0.25 * sigma {
-            v.push(x);
+
+    fn push(&mut self, x: f32) {
+        if self.len < Self::MAX && (self.len == 0 || x - self.v[self.len - 1] >= 0.25) {
+            self.v[self.len] = x;
+            self.len += 1;
         }
     }
-    v.push(mid);
-    for k in IN.iter().rev() {
-        let x = b - k * sigma;
-        if x > mid + 0.25 * sigma {
-            v.push(x);
-        }
+
+    fn as_slice(&self) -> &[f32] {
+        &self.v[..self.len]
     }
-    for k in OUT.iter().rev() {
-        v.push(b + k * sigma);
-    }
-    v.dedup_by(|x, y| (*x - *y).abs() < 0.25);
-    v
 }
 
 fn add_grid_triangles(mesh: &mut Mesh, base: u32, nx: usize, ny: usize) {
@@ -692,14 +767,27 @@ mod tests {
     #[test]
     fn rrect_outline_is_clockwise_and_closed_by_corners() {
         let mut v = Vec::new();
-        rrect_outline(Rect::from_min_size(pos2(0.0, 0.0), vec2(16.0, 16.0)), radii(4.0), 3, &mut v);
+        rrect_outline(
+            Rect::from_min_size(pos2(0.0, 0.0), vec2(16.0, 16.0)),
+            radii(4.0),
+            3,
+            &mut v,
+        );
         assert_eq!(v.len(), 16);
         assert!(signed_area(&v) > 0.0);
         assert!((v[0] - pos2(0.0, 4.0)).length() < 1e-4);
         // radii larger than the box are scaled down (a circle)
         v.clear();
-        rrect_outline(Rect::from_min_size(pos2(0.0, 0.0), vec2(10.0, 10.0)), radii(50.0), 4, &mut v);
-        assert!(v.iter().all(|p| (p.distance(pos2(5.0, 5.0)) - 5.0).abs() < 1e-3));
+        rrect_outline(
+            Rect::from_min_size(pos2(0.0, 0.0), vec2(10.0, 10.0)),
+            radii(50.0),
+            4,
+            &mut v,
+        );
+        assert!(
+            v.iter()
+                .all(|p| (p.distance(pos2(5.0, 5.0)) - 5.0).abs() < 1e-3)
+        );
     }
 
     #[test]
@@ -710,7 +798,11 @@ mod tests {
             Rect::from_min_size(pos2(0.0, 0.0), vec2(828.0, 562.0)),
             View::new(pos2(0.0, 0.0), 1.0),
         );
-        b.fill_rect(&p, Rect::from_min_size(pos2(35.0, 36.0), vec2(16.0, 16.0)), Color32::RED);
+        b.fill_rect(
+            &p,
+            Rect::from_min_size(pos2(35.0, 36.0), vec2(16.0, 16.0)),
+            Color32::RED,
+        );
         assert_eq!(b.mesh().vertices.len(), 8);
         assert_eq!(b.mesh().indices.len(), 3 * (8 + 2));
         assert!(b.mesh().is_valid());
@@ -719,8 +811,16 @@ mod tests {
     #[test]
     fn blurred_rect_peaks_inside() {
         let mut b = Batch::with_params(1.0, vec2(1.0, 1.0));
-        let p = Projection::flat(Rect::from_min_size(Pos2::ZERO, vec2(100.0, 100.0)), View::new(Pos2::ZERO, 1.0));
-        b.blurred_rect(&p, Rect::from_min_size(pos2(40.0, 40.0), vec2(16.0, 16.0)), 8.0, Color32::WHITE);
+        let p = Projection::flat(
+            Rect::from_min_size(Pos2::ZERO, vec2(100.0, 100.0)),
+            View::new(Pos2::ZERO, 1.0),
+        );
+        b.blurred_rect(
+            &p,
+            Rect::from_min_size(pos2(40.0, 40.0), vec2(16.0, 16.0)),
+            8.0,
+            Color32::WHITE,
+        );
         let m = b.mesh();
         assert!(m.is_valid());
         let max_a = m.vertices.iter().map(|v| v.color.a()).max().unwrap();

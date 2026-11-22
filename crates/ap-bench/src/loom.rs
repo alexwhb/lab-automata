@@ -149,10 +149,8 @@ impl<'a> LoomScene<'a> {
             };
             for (i, &on) in row.iter().enumerate().take(self.width) {
                 if on {
-                    let cell = Rect::from_min_size(
-                        pos2(i as f32 * cw + 0.4, y),
-                        vec2(cw - 0.8, rh - 0.8),
-                    );
+                    let cell =
+                        Rect::from_min_size(pos2(i as f32 * cw + 0.4, y), vec2(cw - 0.8, rh - 0.8));
                     b.fill_rect(p, cell, color);
                 }
             }
@@ -165,41 +163,89 @@ impl<'a> LoomScene<'a> {
     }
 
     fn paint_head(&self, b: &mut Batch, painter: &Painter, geo: &LoomGeometry) {
-        let view = geo.view.offset((HEAD.min + geo.container.to_vec2()).to_vec2());
+        let view = geo
+            .view
+            .offset((HEAD.min + geo.container.to_vec2()).to_vec2());
         let size = HEAD.size();
         let p = Projection::flat(Rect::from_min_size(Pos2::ZERO, size), view);
         let r = p.local_rect();
         // box-shadow: 0 12px 0 #0B0C0E, 0 12px 0 1px #2A2D33, 0 30px 40px rgba(0,0,0,.6)
-        b.blurred_rect(&p, r.translate(vec2(0.0, 30.0)), 20.0, tokens::LOOM_HEAD_SHADOW);
+        b.blurred_rect(
+            &p,
+            r.translate(vec2(0.0, 30.0)),
+            20.0,
+            tokens::LOOM_HEAD_SHADOW,
+        );
         let drop = r.translate(vec2(0.0, 12.0));
-        b.fill_rrect(&p, drop.expand(1.0), radii(13.0), tokens::LOOM_HEAD_DROP_EDGE);
+        b.fill_rrect(
+            &p,
+            drop.expand(1.0),
+            radii(13.0),
+            tokens::LOOM_HEAD_DROP_EDGE,
+        );
         b.fill_rrect(&p, drop, radii(12.0), tokens::LOOM_HEAD_DROP);
         // body: linear-gradient(#26282E, #17191D), border 1px #34373E, radius 12
         b.fill_rrect_with(&p, r, radii(12.0), |q| {
-            lerp_color(tokens::LOOM_HEAD_TOP, tokens::LOOM_HEAD_BOTTOM, q.y / size.y)
+            lerp_color(
+                tokens::LOOM_HEAD_TOP,
+                tokens::LOOM_HEAD_BOTTOM,
+                q.y / size.y,
+            )
         });
         b.border(&p, r, radii(12.0), 1.0, tokens::LOOM_HEAD_BORDER);
         // flex row: padding 0 18px, gap 14px, align-items center
         let cy = size.y / 2.0;
         let left = 1.0 + 18.0;
         let right = size.x - 1.0 - 18.0;
-        spool(b, &p, pos2(left + 15.0, cy), self.spool_angle, tokens::ACCENT);
-        spool(b, &p, pos2(right - 15.0, cy), self.spool_angle, tokens::LINK);
+        spool(
+            b,
+            &p,
+            pos2(left + 15.0, cy),
+            self.spool_angle,
+            tokens::ACCENT,
+        );
+        spool(
+            b,
+            &p,
+            pos2(right - 15.0, cy),
+            self.spool_angle,
+            tokens::LINK,
+        );
         let label_font = ap_theme::font::mono_medium(11.0);
         let rule_font = ap_theme::font::mono_medium(13.0);
         let mut x = left + 30.0 + 14.0;
         if !self.head_label.is_empty() {
-            let g = layout_text(painter, self.head_label, label_font.clone(), tokens::LOOM_HEAD_LABEL, 1.1);
+            let g = layout_text(
+                painter,
+                self.head_label,
+                label_font.clone(),
+                tokens::LOOM_HEAD_LABEL,
+                1.1,
+            );
             let (asc, desc) = crate::draw::css_line_metrics(&label_font);
-            b.text(&p, &g, galley_top_for_css_top(&g, x, cy - (asc + desc) / 2.0, &label_font));
+            b.text(
+                &p,
+                &g,
+                galley_top_for_css_top(&g, x, cy - (asc + desc) / 2.0, &label_font),
+            );
             x += g.size().x + 1.1 + 14.0;
         }
         let mut track_right = right - 30.0 - 14.0;
         if !self.rule_label.is_empty() {
-            let g = layout_text(painter, self.rule_label, rule_font.clone(), tokens::INK, 0.0);
+            let g = layout_text(
+                painter,
+                self.rule_label,
+                rule_font.clone(),
+                tokens::INK,
+                0.0,
+            );
             let (asc, desc) = crate::draw::css_line_metrics(&rule_font);
             let lx = track_right - g.size().x;
-            b.text(&p, &g, galley_top_for_css_top(&g, lx, cy - (asc + desc) / 2.0, &rule_font));
+            b.text(
+                &p,
+                &g,
+                galley_top_for_css_top(&g, lx, cy - (asc + desc) / 2.0, &rule_font),
+            );
             track_right = lx - 14.0;
         }
         // the progress track: flex 1, height 8, radius 4
@@ -238,7 +284,12 @@ fn spool(b: &mut Batch, p: &Projection, c: Pos2, angle: f32, hub: Color32) {
 pub(crate) fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
     let t = t.clamp(0.0, 1.0);
     let l = |x: u8, y: u8| (x as f32 + (y as f32 - x as f32) * t).round() as u8;
-    Color32::from_rgba_premultiplied(l(a.r(), b.r()), l(a.g(), b.g()), l(a.b(), b.b()), l(a.a(), b.a()))
+    Color32::from_rgba_premultiplied(
+        l(a.r(), b.r()),
+        l(a.g(), b.g()),
+        l(a.b(), b.b()),
+        l(a.a(), b.a()),
+    )
 }
 
 /// Screen geometry of a painted loom.
@@ -341,7 +392,10 @@ pub fn build_key(b: &mut Batch, rect: Rect, key: KeyVisual) {
         b.fill_rrect(&p, drop, rad, tokens::KEY_DROP);
     }
     let (fill, edge) = match (key.on, key.hovered) {
-        (_, true) => (if key.on { tokens::TINT } else { tokens::KEY }, tokens::KEY_HOVER_EDGE),
+        (_, true) => (
+            if key.on { tokens::TINT } else { tokens::KEY },
+            tokens::KEY_HOVER_EDGE,
+        ),
         (true, false) => (tokens::TINT, tokens::ACCENT),
         (false, false) => (tokens::KEY, tokens::KEY_EDGE),
     };
@@ -350,14 +404,22 @@ pub fn build_key(b: &mut Batch, rect: Rect, key: KeyVisual) {
     // the pattern: svg 46 × 14 at (15, 11); rects at x 1, 17, 33, 12 × 12, rx 2.5, stroke 1
     for (k, &on) in key.pattern.iter().enumerate() {
         let sq = Rect::from_min_size(pos2(15.0 + 1.0 + 16.0 * k as f32, 12.0), vec2(12.0, 12.0));
-        let c = if on { tokens::ACCENT } else { tokens::KEY_EMPTY };
+        let c = if on {
+            tokens::ACCENT
+        } else {
+            tokens::KEY_EMPTY
+        };
         b.fill_rrect(&p, sq, radii(2.5), c);
         b.stroke_rrect(&p, sq, radii(2.5), 1.0, tokens::KEY_PATTERN_STROKE);
     }
     // the arrow: svg 12 × 10 at (32, 32): M6 1v7 M3 5.5 6 8.5 9 5.5, stroke 1.4, round
     let a = |x: f32, y: f32| pos2(32.0 + x, 32.0 + y);
     let w = 1.4;
-    for (from, to) in [((6.0, 1.0), (6.0, 8.0)), ((3.0, 5.5), (6.0, 8.5)), ((6.0, 8.5), (9.0, 5.5))] {
+    for (from, to) in [
+        ((6.0, 1.0), (6.0, 8.0)),
+        ((3.0, 5.5), (6.0, 8.5)),
+        ((6.0, 8.5), (9.0, 5.5)),
+    ] {
         b.line(&p, a(from.0, from.1), a(to.0, to.1), w, tokens::KEY_ARROW);
     }
     for (x, y) in [(6.0, 1.0), (3.0, 5.5), (6.0, 8.5), (9.0, 5.5)] {
@@ -376,6 +438,13 @@ pub fn build_key(b: &mut Batch, rect: Rect, key: KeyVisual) {
     b.fill_rrect(&p, out, radii(3.0), out_fill);
     b.border(&p, out, radii(3.0), 1.0, tokens::KEY_PATTERN_STROKE);
     if key.focused {
-        b.ring(&p, r.expand(4.0), radii(14.0), r.expand(2.0), radii(12.0), tokens::FOCUS);
+        b.ring(
+            &p,
+            r.expand(4.0),
+            radii(14.0),
+            r.expand(2.0),
+            radii(12.0),
+            tokens::FOCUS,
+        );
     }
 }

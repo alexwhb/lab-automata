@@ -61,20 +61,58 @@ sync when you change a public API.
 ## `ap-bench` contract
 
 Pure drawing + geometry with egui types; inputs are plain data so it knows nothing about the
-engine.
+engine. The rustdoc is the reference (`cargo doc -p ap-bench --open`);
+`cargo run -p ap-bench --example scenes` shows every scene interactively.
 
-- `Tilt` / `Projection`: CSS `perspective(P) rotateX(θ) scale(s)` about a transform origin, for
-  a plane of a given size placed at a screen rect: `project(local) -> screen`,
-  `unproject(screen) -> Option<local>` (ray-plane), and helpers to draw projected quads,
-  rounded rects, lines and text (glyph meshes transformed vertex by vertex).
-- `floor(painter, rect, …)` — the `.floor` grid plane; `stage(painter, rect)` — `.graph`.
-- `TrayScene { cols, rows, cell(col,row) -> CellVisual { Empty, Trail(1..=3), Live(age) },
-  tilt (animated 0 ↔ 1 between tilted and flat), hover, cursor, labels }` → paints and returns
-  the hovered cell (through the projection) — the app turns that into edits.
-- `LoomScene` (fabric rows, newest row, progress, rule label, spool angle, keys' states) and
-  the key caps' drawing; `JarScene` (32 × 32 cells, ink, bob phase); `TopDownGrid` (Rule lab:
-  born / alive / ghost cells on the `.well`).
-- Snapshot tests render each scene to PNG with `egui_kittest`.
+- **Projection** (`projection.rs`): `Tilt { perspective, angle_deg, scale, origin }` (CSS
+  `perspective(P) rotateX(θ) scale(s)` + `transform-origin` as fractions; `Tilt::lerp` = CSS
+  transition interpolation), `View { origin, zoom }` (stage CSS px → screen points; zoom
+  shrinks a scene on narrow windows), `Projection::new(tilt, rect_in_stage, view)` with
+  `project(local) -> Pos2`, `unproject(screen) -> Option<local>` (ray–plane; `None` above the
+  horizon / behind the eye), `unproject_inside`, `quad(local_rect) -> [Pos2; 4]` (clockwise
+  from top-left), `bounds`, `magnification`. Validated against Chrome
+  (`tests/chrome_geometry.rs`, data from `crates/ap-bench/scripts/chrome-geometry.mjs`).
+- **Drawing** (`draw.rs`): `Batch::new(&painter)` collects projected shapes in paint order into
+  one `Mesh` (shares the font atlas): `fill_rect`, `fill_rrect(_with)` (gradients),
+  `fill_poly`, `fill_circle`, `border` (CSS border), `ring`, `stroke_rrect`, `stroke_circle`,
+  `line`, `text` (galley glyphs projected vertex by vertex), `blurred_rect` (box-shadow glow,
+  σ = blur/2), `blurred_ellipse` (`filter: blur`, cached), then `paint(&painter)`. Helpers:
+  `layout_text` (letter-spacing), `galley_top_for_css_top`, `css_line_metrics`.
+- **Animation** (`anim.rs`): `cubic_bezier`, `ease`, `ease_in_out`, `ease_out`;
+  `Transition::new(value, secs, ease)` + `set_target` / `step(dt) -> animating` / `value()`
+  (the tray tilt: 0.4 s ease); `spool_angle(secs)` (2.4 s/turn); `jar_bob(secs, index)`.
+- **Ground** (`stage.rs`): `stage(painter, rect)` paints `.graph` (screens call it first);
+  `floor(batch, floor_rect, view, clip)`, `floor_band`, `contact_shadow`, `FLOOR_TILT`.
+- **Tray** (`tray.rs`): `TrayScene { cols, rows, cell: &dyn Fn(col,row) -> CellVisual { Empty,
+  Trail(1..=3), Live(age) }, tilt (0 flat … 1 tilted), tilt_deg (44), hover, cursor,
+  label_left, label_right, zoom }` with `TrayScene::new`, `fit_zoom(avail)`,
+  `content_height()`, `geometry(stage) -> TrayGeometry` (cheap; hit-test before painting),
+  `paint(painter, stage) -> TrayGeometry`, `description(gen, alive)`. `TrayGeometry`:
+  `cell_at(screen)` (exact: lifted faces win, gaps and vacated sides are `None`),
+  `cell_near(screen)` (nearest cell while on the grid — use while drag-painting),
+  `cell_quad` / `cell_rect` (visible face, for chips and focus rings), `tray_rect`,
+  `grid_rect`, `projection()`. `tray_tilt(t, deg)` gives the interpolated transform.
+- **Loom** (`loom.rs`): `LoomScene { rows: &[&[bool]] (oldest first, newest drawn newborn),
+  width (121), capacity (72), head_label, rule_label, progress, spool_angle, zoom }` with
+  `fit_zoom`, `geometry(stage) -> LoomGeometry { board: Projection, head, keys: [Rect; 8]
+  (111 → 000), caption }`, `paint(painter, stage)` (floor, board, fade, head; not the keys),
+  `description(rule, rows)`. Keys: `paint_key(painter, rect, KeyVisual { pattern, on, hovered,
+  pressed, focused })` (`KeyVisual::for_rule(rule, p)`); `LoomGeometry::key_target(i)`
+  includes the 7 px drop for the button's hit area; `fabric_cell_at`.
+- **Jar** (`jar.rs`): `JarScene { size (32), cell: &dyn Fn(x,y) -> bool, ink, bob }` with
+  `paint(painter, area)` where `area` is the card's jar area; reserve
+  `JarScene::FOOTPRINT` (272 × 250) rather than the mockup's 228 px so the slab clears the
+  rule code (TERR-1). `JarScene::description(code, alive)`.
+- **Rule lab** (`topdown.rs`): `TopDownGrid { cols, rows, cell: &dyn Fn(x,y) -> TopCell
+  { Empty, Born, Alive, Ghost } }` with `size_for(avail_w)`, `paint(painter, min, avail_w) ->
+  TopDownGeometry { well, scale }` (`cell_at`, `cell_rect`), `description`.
+- **A11y** (`a11y.rs`): spec-worded descriptions (`tray`, `loom`, `jar`, `top_down`) and
+  `fill(template, values)` for custom wording; the screens set them on the canvas response.
+- **Tokens** (`tokens.rs`): re-exports the `ap_theme` colours the bench uses plus a marked
+  "local tokens" block (bench-only values with their CSS source; candidates for `ap-theme`).
+- Tests: projection maths, Chrome goldens (max deviation < 0.01 px), hit-testing at tilts
+  0 / 0.25 / 0.5 / 0.75 / 1 and zooms, snapshots in `crates/ap-bench/tests/snapshots/`
+  (`UPDATE_SNAPSHOTS=1` to refresh), an ignored release perf test for the frame mesh build.
 
 ## The app (`automata-playground`)
 

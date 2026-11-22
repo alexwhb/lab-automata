@@ -134,7 +134,12 @@ impl<'a> TopDownGrid<'a> {
                     let near = (x < corner || x + corner >= self.cols)
                         && (y < corner || y + corner >= self.rows);
                     if near {
-                        let q = [cell.left_top(), cell.right_top(), cell.right_bottom(), cell.left_bottom()];
+                        let q = [
+                            cell.left_top(),
+                            cell.right_top(),
+                            cell.right_bottom(),
+                            cell.left_bottom(),
+                        ];
                         let poly = crate::jar::clip_convex(&q, &clip);
                         if poly.len() >= 3 {
                             b.fill_poly(&p, &poly, color);
@@ -180,7 +185,9 @@ impl TopDownGeometry {
     pub fn cell_rect(&self, x: usize, y: usize) -> Rect {
         let s = self.scale;
         Rect::from_min_size(
-            self.well.min + vec2(1.0, 1.0) + vec2(x as f32 * PITCH + 1.0, y as f32 * PITCH + 1.0) * s,
+            self.well.min
+                + vec2(1.0, 1.0)
+                + vec2(x as f32 * PITCH + 1.0, y as f32 * PITCH + 1.0) * s,
             Vec2::splat(10.0 * s),
         )
     }

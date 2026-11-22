@@ -36,7 +36,11 @@ pub fn paint_plane_grid(batch: &mut Batch, p: &Projection, grid: &Grid, clip: Re
     if v_max <= 0.0 {
         return;
     }
-    batch.fill_rect(p, Rect::from_min_size(Pos2::ZERO, vec2(size.x, v_max)), grid.base);
+    batch.fill_rect(
+        p,
+        Rect::from_min_size(Pos2::ZERO, vec2(size.x, v_max)),
+        grid.base,
+    );
     // horizontal extent worth drawing: unproject the clip's bottom corners
     let (u0, u1) = {
         let bl = p.unproject(pos2(clip.left() - 2.0, clip.bottom()));

@@ -93,7 +93,14 @@ impl<'a> JarScene<'a> {
         b.fill_rrect(&p, slab, radii(26.0), tokens::JAR_SLAB);
         b.fill_rrect(&p, r, radii(26.0), tokens::JAR_BODY);
         b.border(&p, r, radii(26.0), 2.0, tokens::JAR_EDGE);
-        b.ring(&p, r.shrink(2.0), radii(24.0), r.shrink(8.0), radii(18.0), tokens::JAR_RING);
+        b.ring(
+            &p,
+            r.shrink(2.0),
+            radii(24.0),
+            r.shrink(8.0),
+            radii(18.0),
+            tokens::JAR_RING,
+        );
         // cells: 8 px pitch, 7 × 7 at +.5, clipped to the svg's 20 px corners
         let n = self.size.max(1);
         let pitch = CELLS.width() / n as f32;
@@ -109,7 +116,8 @@ impl<'a> JarScene<'a> {
                     CELLS.min + vec2(x as f32 * pitch + 0.5, y as f32 * pitch + 0.5),
                     Vec2::splat(pitch - 1.0),
                 );
-                let near_corner = (x < corner || x >= n - corner) && (y < corner || y >= n - corner);
+                let near_corner =
+                    (x < corner || x >= n - corner) && (y < corner || y >= n - corner);
                 if near_corner {
                     let poly = clip_convex(&cell_corners(cell), &clip);
                     if poly.len() >= 3 {
@@ -141,7 +149,12 @@ impl<'a> JarScene<'a> {
 }
 
 fn cell_corners(r: Rect) -> [Pos2; 4] {
-    [r.left_top(), r.right_top(), r.right_bottom(), r.left_bottom()]
+    [
+        r.left_top(),
+        r.right_top(),
+        r.right_bottom(),
+        r.left_bottom(),
+    ]
 }
 
 /// Sutherland–Hodgman: `subject` clipped to the convex, clockwise polygon `clip`.
@@ -195,14 +208,20 @@ mod tests {
         let b = cell_corners(Rect::from_min_size(pos2(5.0, 5.0), vec2(10.0, 10.0)));
         let c = clip_convex(&a, &b);
         let bb = Rect::from_points(&c);
-        assert!((bb.min - pos2(5.0, 5.0)).length() < 1e-4 && (bb.max - pos2(10.0, 10.0)).length() < 1e-4);
+        assert!(
+            (bb.min - pos2(5.0, 5.0)).length() < 1e-4
+                && (bb.max - pos2(10.0, 10.0)).length() < 1e-4
+        );
     }
 
     #[test]
     fn footprint_contains_the_jar_slab_and_shadow() {
         let none = |_: usize, _: usize| false;
         for bob in [0.0, -3.0] {
-            let scene = JarScene { bob, ..JarScene::new(&none, Color32::WHITE) };
+            let scene = JarScene {
+                bob,
+                ..JarScene::new(&none, Color32::WHITE)
+            };
             let area = Rect::from_min_size(Pos2::ZERO, JarScene::FOOTPRINT);
             let p = scene.projection(area);
             let slab = p.bounds(p.local_rect().translate(vec2(0.0, 16.0)).expand(2.0));
@@ -210,7 +229,7 @@ mod tests {
             assert!(slab.left() >= 0.0 && slab.right() <= JarScene::FOOTPRINT.x);
         }
         // the shadow's visible extent (≈ 2σ below its ellipse) also fits
-        assert!(196.0 + 30.0 + 20.0 <= JarScene::FOOTPRINT.y);
+        const { assert!(196.0 + 30.0 + 20.0 <= JarScene::FOOTPRINT.y) };
         // and the mockup's 228 px area does not hold the slab (the bug we fix)
         let area = Rect::from_min_size(Pos2::ZERO, JarScene::AREA);
         let scene = JarScene::new(&none, Color32::WHITE);

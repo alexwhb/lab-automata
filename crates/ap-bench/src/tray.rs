@@ -114,11 +114,22 @@ impl<'a> TrayScene<'a> {
         tray_size(self.cols, self.rows)
     }
 
+    /// The stage height (screen points) that holds the tray, its slab and its shadow at this
+    /// scene's zoom: allocate at least this much on narrow, scrolling layouts.
+    pub fn content_height(&self) -> f32 {
+        (TRAY_BOTTOM + SLAB + 50.0) * self.zoom
+    }
+
     /// The largest zoom (≤ 1) at which the tray scene fits `avail` (screen points): use it on
     /// narrow windows.
     pub fn fit_zoom(&self, avail: Vec2) -> f32 {
-        let content = vec2(CONTAINER.x.max(self.tray_size().x + 12.0), TRAY_BOTTOM + 60.0);
-        (avail.x / content.x).min(avail.y / content.y).clamp(0.05, 1.0)
+        let content = vec2(
+            CONTAINER.x.max(self.tray_size().x + 12.0),
+            TRAY_BOTTOM + 60.0,
+        );
+        (avail.x / content.x)
+            .min(avail.y / content.y)
+            .clamp(0.05, 1.0)
     }
 
     /// The screen geometry for a stage at `stage` (the `.graph` rect): the tray projection and
@@ -184,7 +195,11 @@ impl<'a> TrayScene<'a> {
             v,
             stage_rect,
         );
-        stage::floor_band(b, Rect::from_min_size(c + vec2(0.0, 286.0), vec2(CONTAINER.x, 30.0)), v);
+        stage::floor_band(
+            b,
+            Rect::from_min_size(c + vec2(0.0, 286.0), vec2(CONTAINER.x, 30.0)),
+            v,
+        );
         let tray = geo.projection.rect();
         let shadow = Rect::from_min_size(
             pos2(tray.left() + 64.0, tray.bottom() + 8.0),
@@ -208,7 +223,12 @@ impl<'a> TrayScene<'a> {
         b.border(p, r, radii(TRAY_RADIUS), TRAY_EDGE_W, tokens::TRAY_EDGE);
         // the two screws: (10, 10) and right/bottom 10, 6 × 6
         b.fill_circle(p, pos2(13.0, 13.0), 3.0, tokens::TRAY_EDGE);
-        b.fill_circle(p, pos2(r.right() - 13.0, r.bottom() - 13.0), 3.0, tokens::TRAY_EDGE);
+        b.fill_circle(
+            p,
+            pos2(r.right() - 13.0, r.bottom() - 13.0),
+            3.0,
+            tokens::TRAY_EDGE,
+        );
     }
 
     fn paint_tray(&self, b: &mut Batch, painter: &Painter, geo: &TrayGeometry) {
@@ -218,11 +238,23 @@ impl<'a> TrayScene<'a> {
         let font = ap_theme::font::mono_medium(11.0);
         let spacing = 1.1;
         if !self.label_left.is_empty() {
-            let g = layout_text(painter, self.label_left, font.clone(), tokens::TRAY_LABEL, spacing);
+            let g = layout_text(
+                painter,
+                self.label_left,
+                font.clone(),
+                tokens::TRAY_LABEL,
+                spacing,
+            );
             b.text(p, &g, galley_top_for_css_top(&g, 22.0, 12.0, &font));
         }
         if !self.label_right.is_empty() {
-            let g = layout_text(painter, self.label_right, font.clone(), tokens::TRAY_CODE, spacing);
+            let g = layout_text(
+                painter,
+                self.label_right,
+                font.clone(),
+                tokens::TRAY_CODE,
+                spacing,
+            );
             // CSS right: 22px; Chrome counts the trailing letter-spacing in the width
             let w = g.size().x + spacing;
             let left = p.size().x - 22.0 - w;
@@ -428,10 +460,7 @@ impl TrayGeometry {
         let gy_face = g.y + tokens::LIFT_PX;
         if gy_face >= 0.0 {
             let row = (gy_face / PITCH).floor() as usize;
-            if row < self.rows
-                && gy_face - row as f32 * PITCH < CELL
-                && self.is_lifted(col, row)
-            {
+            if row < self.rows && gy_face - row as f32 * PITCH < CELL && self.is_lifted(col, row) {
                 return Some((col, row));
             }
         }
@@ -457,8 +486,12 @@ impl TrayGeometry {
         if g.x < -m || g.y < -m - tokens::LIFT_PX || g.x > size.x + m || g.y > size.y + m {
             return None;
         }
-        let col = ((g.x + GAP / 2.0) / PITCH).floor().clamp(0.0, (self.cols - 1) as f32);
-        let row = ((g.y + GAP / 2.0) / PITCH).floor().clamp(0.0, (self.rows - 1) as f32);
+        let col = ((g.x + GAP / 2.0) / PITCH)
+            .floor()
+            .clamp(0.0, (self.cols - 1) as f32);
+        let row = ((g.y + GAP / 2.0) / PITCH)
+            .floor()
+            .clamp(0.0, (self.rows - 1) as f32);
         Some((col as usize, row as usize))
     }
 

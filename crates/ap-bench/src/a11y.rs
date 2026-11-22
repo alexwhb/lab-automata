@@ -61,8 +61,14 @@ mod tests {
 
     #[test]
     fn spec_wording() {
-        assert_eq!(tray(40, 26, 30, 90), "Cell tray, 40 by 26, generation 30, 90 alive");
-        assert_eq!(jar("B3/S23", 122), "Jar running rule B3/S23, 122 cells alive");
+        assert_eq!(
+            tray(40, 26, 30, 90),
+            "Cell tray, 40 by 26, generation 30, 90 alive"
+        );
+        assert_eq!(
+            jar("B3/S23", 122),
+            "Jar running rule B3/S23, 122 cells alive"
+        );
     }
 
     #[test]
