@@ -86,6 +86,10 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
      (Open With lists the app); they arrive as the Apple Event `odoc` (Breadbox:
      `platform.rs::install_open_documents()`) and should arm the pattern as a stamp (TRAY-9).
      Log `opened pattern <path>` at info level and check-bundle can test it like Breadbox.
+     **Done (platform, `c9d2f3a`)**: `src/platform.rs` (odoc + command-line paths → one queue,
+     drained each frame by the receiving app → `tray.open_file` → Tray, `opened pattern <path>`,
+     parse errors toast); `check-bundle.sh` section 4 opens `glider.rle` with `open -n -a`
+     (SKIP without a window server).
 
   For the future `ap-mcp` owner: the bundle picks up `Contents/MacOS/automata-mcp`
   automatically once a package has a `[[bin]] name = "automata-mcp"`.
@@ -105,6 +109,14 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   frame_ms_avg=0.04` in 3 s (~7 000 fps; headless does 146). Fine for a smoke test, but if the
   real app repaints the same way while the Tray runs it would spin a core / the GPU — worth
   checking that it paces to vsync or to the generation speed.
+  **Done (platform, `2e07ef4`, `11cb793`, `a20175b`)**: it did spin (the real app on the Tray /
+  Loom / Terrarium: 107–114 % CPU; the window smoke ~1 000 fps): eframe paints without vsync
+  back-pressure when macOS doesn't composite the window, and doesn't paint (nor wait) when it
+  knows it's hidden. Now `Ctx::wake_in` paces the Tray / Rule lab Play to their generations,
+  `Ctx::animate` never asks sooner than 1/240 s (every 0.1 s while hidden), the Callout pulse
+  runs only while the Tray runs, and `--smoke` draws only the frames the app asks for
+  (`frames=94` in 3 s, ~31 fps: the pulse). Real app, not composited: Tray 12 %, Loom 26 %,
+  Terrarium 31 %, paused / Series / Rule lab 0 %, any screen hidden (⌘H) 3 %.
 
 - **tray → lead** (`tests/a11y.rs`, red because of the real Tray): `tab_key_walks_in_reading_order`
   expects the bench tabs right after Share, which held while the asides were placeholders.
@@ -121,11 +133,19 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   `app.screens_mut().tray.arm(name, &pattern)` (parse with `ap_engine::pattern::parse_file`)
   and navigate to the Tray; `Screen::receive(Carry { rle })` instead *loads* the pattern on a
   cleared tray (the NAV-4 semantics), which is not what TRAY-9 asks for a dropped / opened file.
+  **Done (platform)**: as suggested, through `State::open_file(path)` (the dropped-file code).
 - **tray → bench owner** (optional, look): side by side with `Tray-1440.png` the newborn /
   alive glows (`0 0 16px rgba(255,170,232,.75)`, `0 0 10px …`) read fainter than Chrome's —
   the mockup shows a soft pink haze around clusters. Compare
   `target/compare/Tray-1440-gen30.png` (`AP_COMPARE=1 cargo test -p automata-playground --test
   tray renders`).
+  **Done (platform, `06cc612`)**: at the same state they match Chrome. The animated reference
+  catches box-shadow / background transitions (.2 s) mid-flight, which is the extra haze.
+  `crates/ap-bench/scripts/chrome-tray-gen30.mjs` renders the bundle at gen 30 with transitions
+  finished; against it the halo around live cells is within 0.2 luminance of Chrome's. Measured
+  Chrome's blur: σ 7.6 / 4.5 for `16px` / `10px` (Skia's three box blurs), now
+  `ap_bench::draw::css_blur_sigma`. Matching the live run's haze would mean animating each
+  cell's transitions (display-rate frames while running); not done.
 - **rulelab → lead (widgets)**: the `advance_block`-based widgets (`BitRow`, `NbGrid`,
   `SegGroup`, `Callout`, `Card::label`) advance with zero spacing, so the parent's `gap` after
   them is lost and the next item touches them (Rule lab: "Born with" bits → "Survives with",
@@ -135,10 +155,12 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
 - **rulelab → lead (widgets, look)**: `MiniButton` grows to its wrapped label's height (30 px
   for "von Neumann"); CSS keeps `.mini` at `height: 28px` and lets the text overflow, so the
   Hexagonal / Moore r2 presets sit 2 px lower than in `RuleLab-1440.png`.
+  **Done (platform, `11cb793`)**: always 28 px, the wrapped label overflows centred.
 - **rulelab → ap-theme owner** (optional): there is no error colour token; the Rule lab's
   script errors use the series' warning red from `lab_theme::LAB_DARK` (`red` `#FF5D4F`,
   `red_bg` `#2A1715`). Add `ap_theme::ERROR` / `ERROR_BG` (re-exporting those) if you want it
   in the Automata palette; `screens/rule_lab/editor.rs` would switch to them.
+  **Done (platform, `61e2190`)**: `ap_theme::ERROR` / `ERROR_BG`; the editor uses them.
 - **rulelab → tray (FYI, NAV-4)**: Rule lab "Open in Playground" sends `Carry { rule: <code>,
   rle: Some(<scrubbed generation, full RLE with rule =>), from: RuleLab }` (asserted in
   `tests/rule_lab.rs` through `tray.received`; please keep that field or tell me what to read).
@@ -169,6 +191,13 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   never stops), so a paused Terrarium doesn't repaint every frame; the loom spools stop when
   paused as the mockup says. One line to change in `terrarium.rs::tick` if the lead prefers
   the always-on bob.
+- **platform (decision, Tray)**: likewise the "what is happening" dot pulses only while the
+  Tray runs (`Callout::pulse(self.running)` in `tray/panels.rs`); otherwise its 30 fps repaint
+  kept a paused Tray drawing. Pacing API for screens: `ctx.wake_in(ticker.due_in(rate))` when
+  only a step changes the picture, `ctx.animate()` while something moves every frame (Loom
+  spools and Terrarium jars keep `animate`, as they move every frame).
+- **platform → packaging / lead (FYI)**: `--smoke` now paces like the app, so `frames=` is a
+  frame-rate check (Tray: ~90 in 3 s); `test-all` could gate it (e.g. `frames < 400`).
 
 - **mcp → lead (FYI, hooks)**: the MCP wave touched the shell minimally: `app.rs` has a
   `control` field, `control::poll(self, ui)` as the first line of `frame()`, `App::logic` →
