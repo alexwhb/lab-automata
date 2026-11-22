@@ -174,7 +174,6 @@ pub const LOGO_BODY: Color32 = GHOST;
 /// [`EDGE`] on [`CALLOUT`]; the dashed "Nothing bred yet." box border `#2E2E2E`.
 pub const DASHED: Color32 = BORDER_STRONG;
 
-
 // ============================================================================================
 // Cell-age scale (automata only) — "reads in greyscale too; live cells lift 6 px off the tray"
 
@@ -291,8 +290,15 @@ pub const CART_BODIES: [Color32; 6] = [
     hex(0x4BE3A0),
     hex(0x6CCBF5),
 ];
-/// Terrarium jar inks, by jar index (same six hues).
-pub const JAR_INKS: [Color32; 6] = CART_BODIES;
+/// Terrarium jar inks, by jar index (Terrarium mockup `inks`: same six hues, different order).
+pub const JAR_INKS: [Color32; 6] = [
+    hex(0xF06BD0),
+    hex(0xF3DC6B),
+    hex(0xB79CFF),
+    hex(0x4BE3A0),
+    hex(0xFF8E7A),
+    hex(0x6CCBF5),
+];
 
 // ============================================================================================
 // App identities (Series screen, app switcher)

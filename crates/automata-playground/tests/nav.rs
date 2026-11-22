@@ -176,12 +176,15 @@ fn space_and_s_reach_the_active_screen() {
     assert!(h.state().screens().tray.running, "Space runs");
     press(&mut h, Key::Space);
     assert!(!h.state().screens().tray.running, "Space pauses");
+    // (it advanced while running; S adds exactly one generation each and stays paused)
+    let before = h.state().screens().tray.generation;
     press(&mut h, Key::S);
     press(&mut h, Key::S);
-    assert_eq!(h.state().screens().tray.generation, 2, "S steps");
+    assert_eq!(h.state().screens().tray.generation, before + 2, "S steps");
+    assert!(!h.state().screens().tray.running);
     // the header shows it
     settle(&mut h);
-    assert!(has_label(&h, "gen 0002"));
+    assert!(has_label(&h, &format!("gen {:04}", before + 2)));
 
     // with a tab focused, Space activates the tab and doesn't toggle the tray
     h.get_by_role_and_label(Role::Tab, "Loom · 1D").focus();

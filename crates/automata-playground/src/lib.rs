@@ -12,6 +12,7 @@ pub mod launcher;
 pub mod layout;
 pub mod router;
 pub mod screens;
+pub mod smoke;
 pub mod widgets;
 
 pub use app::{AppOptions, AutomataApp};
@@ -24,6 +25,16 @@ pub use screens::Screen;
 pub const APP_NAME: &str = "Automata Playground";
 /// The macOS bundle id.
 pub const APP_ID: &str = "dev.labseries.AutomataPlayground";
+
+/// When the process started (set first thing in `main`; the smoke run's `first_frame_ms`).
+pub static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
+/// This checkout's crate folder, except in bundle builds (`AUTOMATA_BUNDLE=1`, set by
+/// `scripts/bundle-macos.sh`) so the release binary carries no paths of the build machine.
+pub const MANIFEST_DIR: Option<&str> = match option_env!("AUTOMATA_BUNDLE") {
+    Some(_) => None,
+    None => Some(env!("CARGO_MANIFEST_DIR")),
+};
 
 /// Window options: 1440 × 900 (the mockup's board), at least 390 × 600, wgpu, the window's
 /// size and position persisted.

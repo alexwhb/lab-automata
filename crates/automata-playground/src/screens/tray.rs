@@ -6,7 +6,7 @@
 //! the real tray on `ap-engine` + `ap-bench`.
 
 use super::Screen;
-use crate::ctx::{Carry, Command, Ctx};
+use crate::ctx::{Carry, Command, Ctx, Ticker};
 use crate::layout::{self, Column};
 use crate::widgets::tabs::RowSlot;
 use crate::widgets::{Icon, SegGroup, SegItem, SegStyle, counter, ghost, prim};
@@ -39,6 +39,7 @@ pub struct State {
     pub tool: usize,
     /// The last rule / pattern carried here (NAV-4).
     pub received: Option<Carry>,
+    ticker: Ticker,
     started: bool,
 }
 
@@ -110,6 +111,12 @@ impl Screen for State {
     }
 
     fn ui(&mut self, ctx: &mut Ctx, ui: &mut Ui) {
+        // the placeholder counts generations at the default 10 gen/s while running (the
+        // engine's step goes here in wave 2)
+        if self.running {
+            self.generation += u64::from(self.ticker.steps(ctx.dt(), 10.0));
+            ctx.animate();
+        }
         layout::columns(ui, ctx, &COLUMNS, |ui, ctx, i| match i {
             0 => {
                 super::placeholder_section(ui, "Rules", "Six rule cartridges");

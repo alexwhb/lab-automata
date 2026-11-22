@@ -255,8 +255,10 @@ fn spotlight(bundle_id: &str) -> Option<PathBuf> {
 /// in, and any ancestor of the running executable that has a sibling repo in it.
 fn lab_series_roots() -> Vec<PathBuf> {
     let mut roots = Vec::new();
-    let built = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    if let Ok(p) = built.canonicalize() {
+    // the checkout this was built in (not in bundle builds: no machine paths in the binary)
+    if let Some(dir) = crate::MANIFEST_DIR
+        && let Ok(p) = Path::new(dir).join("../../..").canonicalize()
+    {
         roots.push(p);
     }
     if let Ok(exe) = std::env::current_exe() {
