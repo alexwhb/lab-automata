@@ -106,6 +106,27 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   real app repaints the same way while the Tray runs it would spin a core / the GPU — worth
   checking that it paces to vsync or to the generation speed.
 
+- **tray → lead** (`tests/a11y.rs`, red because of the real Tray): `tab_key_walks_in_reading_order`
+  expects the bench tabs right after Share, which held while the asides were placeholders.
+  Now Tab follows the mockup's DOM order (NAV-5 "reading order"): header → the rules aside
+  (Life, HighLife, Seeds, Day & Night, Maze, Coral, then the stamps Glider, Spaceship, …) →
+  bench tabs → Draw / Erase / Stamp / Random soup / Clear → the tray grid → the readouts.
+  Suggested fix: expect `…, "Share", "Life", "HighLife", "Seeds", "Day & Night", "Maze",
+  "Coral", "Glider", "Spaceship"` for the first 19 presses (what the app does now), or press
+  Tab 33 times and check the tabs and tool items follow the 14 aside buttons. Everything else
+  in the app suite is green with the Tray (`cargo test -p automata-playground`).
+- **tray → lead (FYI)**: `dae8c7b` added `ap-engine` and `ap-bench` to the app crate's
+  `[dependencies]` (all three wave-2 screens need them; two lines + `Cargo.lock`).
+- **tray → shell / packaging** (Finder `odoc`, request 3 above): arm the opened file with
+  `app.screens_mut().tray.arm(name, &pattern)` (parse with `ap_engine::pattern::parse_file`)
+  and navigate to the Tray; `Screen::receive(Carry { rle })` instead *loads* the pattern on a
+  cleared tray (the NAV-4 semantics), which is not what TRAY-9 asks for a dropped / opened file.
+- **tray → bench owner** (optional, look): side by side with `Tray-1440.png` the newborn /
+  alive glows (`0 0 16px rgba(255,170,232,.75)`, `0 0 10px …`) read fainter than Chrome's —
+  the mockup shows a soft pink haze around clusters. Compare
+  `target/compare/Tray-1440-gen30.png` (`AP_COMPARE=1 cargo test -p automata-playground --test
+  tray renders`).
+
 ## Candidates for labkit
 
 - **shell**: `automata_playground::widgets::flow` (CSS flex-wrap rows with `margin-left:

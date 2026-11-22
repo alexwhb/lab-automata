@@ -288,6 +288,34 @@ impl Screen for State {
   renders (`render`, `render_full`, `screenshot`). `scripts/compare-mockup.sh` writes
   `[app | mockup]` PNGs to `target/compare/`.
 
+
+### Screen control API
+
+What the MCP bridge (wave 3) and tests call on the screens' states (`app.screens_mut().<name>`)
+to drive them without the pointer. Each method acts on the real engine state; the next frame
+draws the result.
+
+#### Tray (`screens::tray::State`)
+
+| method | |
+|---|---|
+| `rule() -> &LifeRule`, `set_rule(LifeRule)` | the rule (cells stay); cartridges / bits / name follow |
+| `load_pattern(&Pattern) -> bool` | clears the tray and places the pattern centred (wrapping); patterns larger than 40 × 26 are trimmed, then cropped around their centre (returns `true` when cropped); counters reset |
+| `set_running(bool)`, `running() -> bool` | Run / Pause (also the public `running` field) |
+| `step_n(u32)` | advances n generations now, running or not |
+| `clear()`, `restart()`, `randomize(seed: u64)` | Clear (rule kept), Restart (starting garden + Life), a 30 % soup from `seed` (rule kept); counters reset |
+| `rle() -> String` | the whole 40 × 26 tray as RLE with `rule =` (what Share copies; positions survive a round trip through `load_pattern`) |
+| `stats() -> TrayStats` | `{ generation, population, born, died, mood_title, mood_text }` |
+| `grid() -> &Grid`, `history() -> &[usize]` | ages / trails; the sparkline's last ≤ 120 populations |
+| `set_tool(Tool)`, `current_tool()`, `pick_stamp(i)`, `arm(name, &Pattern)` | Draw / Erase / Stamp, a built-in stamp, a pattern armed as the custom stamp (TRAY-9; the Finder `odoc` hook should call `arm`) |
+| `set_speed(f32)`, `speed()`, `trails()`, `flat()`, `tilt()`, `cursor()` | look and feel (speed clamped to 1–30) |
+| `description()` / `Screen::describe` | "Cell tray, 40 by 26, generation N, M alive" (A11Y-4) |
+| `cell_center(x, y)`, `cell_rect(x, y)`, `cell_at(pos)` | screen geometry of the last frame drawn (through the perspective), for pointer tests |
+
+`receive(Carry)` (NAV-4) parses the rule (Moore) and, with an RLE, loads it like
+`load_pattern`; ⌘V (`Event::Paste`) and dropped `.rle` / `.cells` files arm the pattern as
+the custom stamp.
+
 ## MCP
 
 `automata-mcp` (crate `ap-mcp`) follows `../chem-playground/crates/chem-mcp`: engine tools run
