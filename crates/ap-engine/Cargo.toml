@@ -1,0 +1,15 @@
+[package]
+name = "ap-engine"
+description = "The Automata Playground engine, free of UI: Life-like rules on any 5 × 5 neighbourhood, grids with cell ages and ghost trails, patterns and RLE, elementary CA, Rule-lab analysis, the Tray's mood, Terrarium breeding and the rule script."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# Goldens are JSON written by scripts/mockup-goldens.mjs.
+serde = { workspace = true }
+serde_json = { workspace = true }
