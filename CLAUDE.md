@@ -42,6 +42,6 @@ mode (Rule lab: spec, scrub, analyse, netlist-style script, export).
 - **Every number shown comes from the engine** (SPEC DONE-2). No mockup numbers in screens.
 - **No sparkle / magic-wand / four-point-star icons, ever** (no ✨ ✦ ✧). Pick an icon that says
   what the feature does.
-- `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings` and
+- `cargo fmt --check` (not `--all`: that also checks `../labkit`), `cargo clippy --workspace --all-targets -- -D warnings` and
   `cargo test --workspace` must stay green (`scripts/test-all.sh` once it exists). Tests must
   not take more than a few seconds each in the default (opt-level 2) test profile.

@@ -448,7 +448,10 @@ mod tests {
         assert_eq!(SIDE.to_srgba_unmultiplied(), [17, 17, 17, 214]);
         assert_eq!(PAPER.major.a(), 10);
         // shade() of the Life cartridge body (#F06BD0 × .45) is #6C305E
-        assert_eq!(shade(CART_BODIES[0], 0.45), Color32::from_rgb(0x6C, 0x30, 0x5E));
+        assert_eq!(
+            shade(CART_BODIES[0], 0.45),
+            Color32::from_rgb(0x6C, 0x30, 0x5E)
+        );
     }
 
     #[test]
