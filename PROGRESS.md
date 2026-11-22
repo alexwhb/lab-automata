@@ -222,6 +222,42 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   `AppOptions::default()` now listens on `ap_shared::bridge_socket_path()` (tests / smoke: none);
   `lib.rs` has `run_with(opts)`; `main.rs` takes `--no-mcp`. New crates: `ap-shared`, `ap-mcp`.
 
+## Review fixes (`fixes`, 2026-11-22)
+
+The independent review's verified findings, each with a regression test (ported from the
+reviewer's repro, seen failing before the fix): `crates/automata-playground/tests/review_regressions.rs`,
+`crates/ap-engine/tests/review_regressions.rs`, `crates/ap-bench/tests/review_regressions.rs`,
+`crates/ap-mcp/tests/review_regressions.rs`.
+
+- **1** Rule lab reads stale while a background run computes: `State::finish()` (public) before
+  scrub / Open in Playground / Export / every `lab.*` bridge call, `Lab::set_script` waits; while
+  a run computes the run header, tiles, verdict, RLE and `describe` say "running…".
+- **2** Tray tap (press + release in one frame) drew nothing; press + move started at the
+  pointer's end: the press runs on a same-frame click too, at the frame's press position.
+- **3** Open in Playground with a non-Moore-r1 neighbourhood: refused with "The Tray runs Moore
+  r1 rules; this rule uses …" (the carry is a rulestring the Tray reads as Moore r1).
+- **4** Tray `rle()` → `load_pattern()` recentred: a pattern that fits keeps its box; bigger
+  ones are trimmed, then cropped around their centre (Rule-lab frames as before).
+- **5 / 6** `describe` mixed screens / answered for another screen: captures carry their route,
+  a screen change under a waiting request settles again, a named `screen` is gone back to
+  (≤ `MAX_RETURNS`).
+- **7** Abandoned bridge requests were applied: `handle` drops them (`PendingRequest::is_abandoned`).
+- **8** Rule-script tokenizer quadratic in whitespace runs: linear (100 k spaces: 2.1 s → < 1 ms).
+- **9** Analyse in Rule lab into a big spec froze the frame: `receive` runs it in the background.
+- **10** Superseded Rule-lab workers ran to the end: `ap_engine::analysis::run_cancellable`;
+  dropping a `Pending` cancels it within a generation.
+- **11** A leading BOM made a control change wipe the script: stripped / skipped.
+- **12** `loom.set {seed, restart}` discarded the seed: no restart after `set_start`.
+- **13** `LoomGeometry::fabric_cell_at` returned row == capacity on the bottom edge (one-line
+  fix in `ap-bench`, platform's crate).
+- Also: Tray `set_speed(NaN)` ignored; ⌘V pastes over 4 MB and stamps over 10 000 live cells
+  refused with a toast; a NAV-4 carry survives a bridge `navigate` in the next frame (it was
+  dropped by `apply`); `run_life` sizes a too-big box by its live cells; `tray_load_pattern`'s
+  `maxLength` (now 170 000) fits the bridge's 1 MiB line after JSON escaping, and `AppLink::call`
+  refuses bigger arguments clearly.
+- `tests/mcp_bridge.rs::a_client_that_leaves_mid_screenshot_does_no_harm` now waits until the
+  app holds the request before hanging up (hanging up first is finding 7's case).
+
 ## Candidates for labkit
 
 - **shell**: `automata_playground::widgets::flow` (CSS flex-wrap rows with `margin-left:
@@ -240,6 +276,15 @@ the harness, `app.rs`, `ap-engine` or `ap-bench` go under Requests (the lead han
   Playground's; with the generic half of both `control.rs` files (status / navigate /
   screenshot with settle frames / describe, the hidden-window `logic`) they could move into
   `lab-mcp` behind an `egui` feature, parameterised by the app's route type.
+  **fixes (review)**: if it moves, keep what `control.rs` learnt: the capture records the route
+  it was armed on, waiting requests re-settle when the screen changes under them and honour a
+  named `screen` (findings 5 / 6), and abandoned requests are dropped before they're applied.
+- **fixes (review, `lab-mcp` bridge)**: `PendingRequest::is_abandoned` is set when the reader
+  sees EOF, which a client that half-closes its write side after sending (e.g. `nc -N`) also
+  causes; such a client now gets no reply from Automata. An exact "peer gone" check (the write
+  side failing / `POLLHUP`) would tell the two apart. The 1 MiB `MAX_REQUEST_BYTES` is per JSON
+  line after escaping; servers must size their schemas' `maxLength` for it (Automata:
+  `TRAY_PATTERN_MAX_LEN`).
 
 ## Open issues
 
