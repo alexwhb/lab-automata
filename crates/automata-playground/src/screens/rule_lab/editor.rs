@@ -8,13 +8,13 @@
 //! AccessKit: a multi-line text input named "Rule script" whose description lists the errors.
 
 use crate::widgets::Card;
-use crate::widgets::text::wrapped;
+use crate::widgets::text::{css_rows, wrapped};
 use ap_engine::ScriptError;
 use ap_theme as t;
 use eframe::egui::{
-    Align, Color32, CornerRadius, Frame, Galley, Margin, Rect, ScrollArea, Sense, Shape, Stroke,
-    TextBuffer, TextEdit, Ui, WidgetInfo, accesskit::Role, epaint::text::LayoutJob,
-    epaint::text::TextFormat, pos2, vec2,
+    Align, CornerRadius, Frame, Galley, Margin, Rect, ScrollArea, Sense, Shape, Stroke, TextBuffer,
+    TextEdit, Ui, WidgetInfo, accesskit::Role, epaint::text::LayoutJob, epaint::text::TextFormat,
+    pos2, vec2,
 };
 use std::sync::Arc;
 
@@ -24,14 +24,6 @@ pub const NAME: &str = "Rule script";
 pub const LAST_VALID: &str = "The last valid script is still in effect.";
 /// `.code` line height: 12 px × 1.65.
 pub const LINE_H: f32 = 19.8;
-
-/// The series' warning red (`lab_theme::LAB_DARK.red`, `#FF5D4F`) and its callout fill.
-fn red() -> Color32 {
-    lab_theme::LAB_DARK.red
-}
-fn red_band() -> Color32 {
-    lab_theme::LAB_DARK.red_bg
-}
 
 /// What the editor did this frame.
 #[derive(Debug)]
@@ -53,7 +45,7 @@ fn job(text: &str, error_lines: &[usize]) -> LayoutJob {
         ..Default::default()
     };
     let bad = TextFormat {
-        underline: Stroke::new(1.0, red()),
+        underline: Stroke::new(1.0, t::ERROR),
         ..normal.clone()
     };
     for (i, line) in text.split_inclusive('\n').enumerate() {
@@ -82,7 +74,10 @@ pub fn script_editor(ui: &mut Ui, text: &str, errors: &[ScriptError]) -> EditorO
         // a slot under the text for the error bands
         let bands = ui.painter().add(Shape::Noop);
         let mut layouter = |ui: &Ui, buf: &dyn TextBuffer, _wrap: f32| -> Arc<Galley> {
-            ui.fonts_mut(|f| f.layout_job(job(buf.as_str(), &error_lines)))
+            css_rows(
+                ui.fonts_mut(|f| f.layout_job(job(buf.as_str(), &error_lines))),
+                LINE_H,
+            )
         };
         let width = ui.available_width();
         let card_left = ui.max_rect().left() - 14.0;
@@ -114,14 +109,14 @@ pub fn script_editor(ui: &mut Ui, text: &str, errors: &[ScriptError]) -> EditorO
                 pos2(view.left() - 6.0, y),
                 pos2(view.right() + 6.0, y + row.height()),
             );
-            shapes.push(Shape::rect_filled(band, CornerRadius::same(3), red_band()));
+            shapes.push(Shape::rect_filled(band, CornerRadius::same(3), t::ERROR_BG));
             shapes.push(Shape::rect_filled(
                 Rect::from_min_max(
                     pos2(card_left + 5.0, y + 2.0),
                     pos2(card_left + 7.0, y + row.height() - 2.0),
                 ),
                 CornerRadius::same(1),
-                red(),
+                t::ERROR,
             ));
         }
         ui.painter().set(bands, Shape::Vec(shapes));
@@ -181,7 +176,7 @@ fn error_list(ui: &mut Ui, errors: &[ScriptError]) {
                 ui,
                 &message(e),
                 font.clone(),
-                red(),
+                t::ERROR,
                 width - 12.0,
                 Some(18.0),
             )
@@ -204,9 +199,9 @@ fn error_list(ui: &mut Ui, errors: &[ScriptError]) {
         painter.rect_filled(
             Rect::from_min_size(pos2(rect.left() + 1.0, y + 4.0), vec2(2.0, gh - 8.0)),
             CornerRadius::same(1),
-            red(),
+            t::ERROR,
         );
-        painter.galley(pos2(rect.left() + 12.0, y), g, red());
+        painter.galley(pos2(rect.left() + 12.0, y), g, t::ERROR);
         let text = message(e);
         ui.interact(
             Rect::from_min_size(pos2(rect.left(), y), vec2(width, gh)),

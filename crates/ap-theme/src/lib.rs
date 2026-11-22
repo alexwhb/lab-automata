@@ -156,6 +156,16 @@ pub const PLOT_BG: Color32 = hex(0x0B0C0E);
 pub const PLAYHEAD: Color32 = LINK;
 
 // ============================================================================================
+// Errors — the series' warning red. The Automata mockup has no error state, so the Rule lab's
+// script errors use the lab series' shared one: labkit's `lab_theme::LAB_DARK` (from the Chem
+// Playground mockup's warning callout: `--red: #FF5D4F`, fill `#2A1715`).
+
+/// Error text, underlines and markers (Rule lab script errors) `#FF5D4F`.
+pub const ERROR: Color32 = lab_theme::LAB_DARK.red;
+/// The band behind a line with an error `#2A1715`.
+pub const ERROR_BG: Color32 = lab_theme::LAB_DARK.red_bg;
+
+// ============================================================================================
 // Inputs and glyphs (added by the app shell, wave 1)
 
 /// `input[type=range]` with `accent-color: #F06BD0` as Chrome draws it in the mockup
@@ -447,6 +457,8 @@ mod tests {
         assert_eq!(ACCENT, Color32::from_rgb(0xF0, 0x6B, 0xD0));
         assert_eq!(SIDE.to_srgba_unmultiplied(), [17, 17, 17, 214]);
         assert_eq!(PAPER.major.a(), 10);
+        assert_eq!(ERROR, Color32::from_rgb(0xFF, 0x5D, 0x4F));
+        assert_eq!(ERROR_BG, Color32::from_rgb(0x2A, 0x17, 0x15));
         // shade() of the Life cartridge body (#F06BD0 × .45) is #6C305E
         assert_eq!(
             shade(CART_BODIES[0], 0.45),
@@ -495,6 +507,10 @@ mod tests {
             }
         }
         let pairs = [
+            ("error on card", ERROR, CARD),
+            ("error on inset", ERROR, INSET),
+            ("error on its band", ERROR, ERROR_BG),
+            ("text_dim on the error band", TEXT_DIM, ERROR_BG),
             ("ink on tint", INK, TINT),
             ("ink on callout", INK, CALLOUT),
             ("text_dim on callout", TEXT_DIM, CALLOUT),
