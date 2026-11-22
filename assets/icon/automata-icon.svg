@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Automata Playground app icon: the header logo mark of docs/design/mockup/Tray.dc.html (a
+       #171717 rounded square with a 1.5 px #F06BD0 border holding a glider: one cyan newborn
+       cell and four magenta live cells) on the macOS icon grid (824 px body, 100 px margin),
+       like ../breadbox/assets/icon/breadbox-icon.svg. The four empty places of the glider's
+       3 × 3 box are drawn as empty Tray cells, and the live cells glow as they do on the Tray.
+       Rendered to "Automata Playground.icns" by assets/icon/render-icon.mjs. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#242424"/>
+      <stop offset="1" stop-color="#101010"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow-newborn" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#4CC3F0" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#4CC3F0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-live" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#F06BD0" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#F06BD0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cell-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.18"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-10%" width="130%" height="135%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="tile">
+      <rect x="100" y="100" width="824" height="824" rx="186"/>
+    </clipPath>
+  </defs>
+
+  <!-- the tile -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#body)" filter="url(#shadow)"/>
+  <g clip-path="url(#tile)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+  </g>
+  <!-- the border runs flush with the tile edge (outer radius = the tile's 186) -->
+  <rect x="118" y="118" width="788" height="788" rx="168" fill="none" stroke="#F06BD0" stroke-width="36"/>
+
+  <!-- the mark, in the logo's 26-unit space: its rect (1..25) maps onto the tile (100..924) -->
+  <g transform="translate(65.6667 65.6667) scale(34.3333)">
+    <!-- empty Tray cells (ap-theme EMPTY) in the glider's 3 × 3 box -->
+    <g fill="#1F2026">
+      <rect x="5.5" y="5.5" width="4" height="4" rx="1"/>
+      <rect x="16.5" y="5.5" width="4" height="4" rx="1"/>
+      <rect x="5.5" y="11" width="4" height="4" rx="1"/>
+      <rect x="11" y="11" width="4" height="4" rx="1"/>
+    </g>
+    <!-- glows -->
+    <circle cx="13" cy="7.5" r="5" fill="url(#glow-newborn)"/>
+    <ellipse cx="14" cy="17" rx="10" ry="6.5" fill="url(#glow-live)"/>
+    <!-- the glider: newborn (cyan) and live (magenta) cells -->
+    <rect x="11" y="5.5" width="4" height="4" rx="1" fill="#4CC3F0"/>
+    <g fill="#F06BD0">
+      <rect x="16.5" y="11" width="4" height="4" rx="1"/>
+      <rect x="5.5" y="16.5" width="4" height="4" rx="1"/>
+      <rect x="11" y="16.5" width="4" height="4" rx="1"/>
+      <rect x="16.5" y="16.5" width="4" height="4" rx="1"/>
+    </g>
+    <g fill="url(#cell-sheen)">
+      <rect x="11" y="5.5" width="4" height="4" rx="1"/>
+      <rect x="16.5" y="11" width="4" height="4" rx="1"/>
+      <rect x="5.5" y="16.5" width="4" height="4" rx="1"/>
+      <rect x="11" y="16.5" width="4" height="4" rx="1"/>
+      <rect x="16.5" y="16.5" width="4" height="4" rx="1"/>
+    </g>
+  </g>
+</svg>
